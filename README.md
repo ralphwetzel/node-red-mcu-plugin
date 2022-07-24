@@ -24,31 +24,17 @@ After merger of [this small PR](https://github.com/phoddie/node-red-mcu/pull/15)
         "props": [
             {
                 "p": "payload"
-            },
-            {
-                "p": "topic",
-                "vt": "str"
-            },
-            {
-                "p": "test",
-                "v": "tester",
-                "vt": "str"
-            },
-            {
-                "p": "xxx",
-                "v": "true",
-                "vt": "bool"
             }
         ],
         "repeat": "3",
         "crontab": "",
         "once": true,
         "onceDelay": "3",
-        "topic": "Hallo",
+        "topic": "",
         "payload": "",
         "payloadType": "date",
         "_mcu": true,
-        "x": 230,
+        "x": 210,
         "y": 260,
         "wires": [
             [
@@ -60,7 +46,7 @@ After merger of [this small PR](https://github.com/phoddie/node-red-mcu/pull/15)
         "id": "799b7e8fcf64e1fa",
         "type": "debug",
         "z": "b8a90445a0b6a4f4",
-        "name": "debug 4",
+        "name": "Debug from MCU",
         "active": true,
         "tosidebar": true,
         "console": false,
@@ -70,7 +56,7 @@ After merger of [this small PR](https://github.com/phoddie/node-red-mcu/pull/15)
         "statusVal": "payload",
         "statusType": "msg",
         "_mcu": true,
-        "x": 560,
+        "x": 470,
         "y": 260,
         "wires": []
     }
