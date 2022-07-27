@@ -2,6 +2,7 @@ const { exec } = require('node:child_process');
 const fs = require('fs-extra');
 const os = require("os");
 const path = require("path");
+const ws = require("ws");
 
 const app_name = "node-red-mcu-plugin";
 const build_cmd = "mcconfig -d -m -p mac"
@@ -22,8 +23,7 @@ module.exports = function(RED) {
         node.on('input', function(msg, send, done) {
 
             if (proxy) {
-                // TODO: Add functionality...
-                console.log(msg);
+                proxy.send2mcu("inject", this.z, this.id);
             }
             return;
         });
@@ -293,6 +293,7 @@ module.exports = function(RED) {
             });
 
             RED.events.on("runtime-event", function(data) {
+                return;
                 if (data && data.payload) {
                     if (data.payload.state === "start" && data.payload.deploy === true) {
                         console.log(data);
@@ -428,6 +429,9 @@ module.exports = function(RED) {
                 // console.log("MCU -> build");
                 //res.sendStatus(200);
             });
+
+
+
 /*
             RED.httpAdmin.get(`${apiRoot}/test`, routeAuthHandler, (req, res) => {
                 // res.json(flowDebugger.getBreakpoints());
