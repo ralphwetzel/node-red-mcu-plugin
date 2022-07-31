@@ -2,15 +2,16 @@ const { exec } = require('node:child_process');
 const fs = require('fs-extra');
 const os = require("os");
 const path = require("path");
-const ws = require("ws");
 
 const app_name = "node-red-mcu-plugin";
 const build_cmd = "mcconfig -d -m -p mac"
 
-const mcuProxy = require("./proxy.js");
+const mcuProxy = require("./lib/proxy.js");
 
 let flows2build = [];
 let proxy;
+
+let error_header = "*** Error while loading node-red-mcu-plugin:"
 
 module.exports = function(RED) {
 
@@ -36,17 +37,72 @@ module.exports = function(RED) {
 
 
     // *****
-    // Apply a patch to hook into the node creation process of the runtime.
+    // Calculate path to flowUtil (lib/flows/util.js" & require it
     let rm = require.main.path;
-    let rmp = path.parse(rm);
-    let rmpd = rmp.dir.split(path.sep);
 
-    let flowUtil;
-    let rmpdl = rmpd.length;
-    if (rmpd[rmpdl-1]=="node_modules" && rmpd[rmpdl-2]=="packages" && rmpd[rmpdl-3]=="node-red") {
-        let p = path.join(rmp.dir,"@node-red","runtime","lib", "flows", "util.js");
-        flowUtil = require(p)
+    try {
+        let stat = fs.lstatSync(rm);
+        if (!stat.isDirectory()) {
+            console.log(error_header);
+            console.log("require.main.path is not a directory.");
+            return;
+        }
+    } catch (err) {
+        console.log(error_header);
+        if (error_header.code == 'ENOENT') {
+            console.log("require.main.path not found.");
+        } else {
+            console.log("Error while handling require.main.path.")
+        }
+        return;
     }
+
+    // split path into segments ... the safe way
+    rm = path.normalize(rm);
+    let rms = []
+    let rmp;
+    do {
+        rmp = path.parse(rm);
+        if (rmp.base.length > 0) {
+            rms.unshift(rmp.base);
+            rm = rmp.dir;    
+        }
+    } while (rmp.base.length > 0)
+
+    let rmsl = rms.length;
+
+    if (rms.includes("packages"))  {
+        if (rms[rmsl-3]=="packages" && rms[rmsl-2]=="node_modules" && rms[rmsl-1]=="node-red") {
+            // dev:     [...]/node-red/packages/node_modules/node-red
+            // install: [...]/lib/node_modules/node-red
+            // pi:      /lib/node_modules/node-red/
+
+            // dev:     [...]/node-red/packages/node_modules/@node-red
+            // install: [...]/lib/node_modules/node-red/node_modules/@node-red
+            // pi:      /lib/node_modules/node-red/node_modules/@node-red
+            rms.splice(-2);
+        }
+    }
+
+    // compose things again...
+    let p = path.join(rmp.root, ...rms,"node_modules", "@node-red","runtime","lib", "flows", "util.js");
+
+    if (!fs.existsSync(p)) {
+        console.log(error_header)
+        console.log("Failed to calculate correct patch path.");
+        console.log("Please raise an issue @ our GitHub repository, stating the following information:");
+        console.log("> require.main.path:", require.main.path);
+        console.log("> utils.js:", p);
+        return;
+    }
+
+    let flowUtil = require(p)
+
+    // End "Calculate ..."
+    // *****
+
+    // *****
+    // Apply a patch to hook into the node creation process of the runtime.
 
     let orig_createNode = flowUtil.createNode;
     function patched_createNode(flow,config) {
