@@ -476,10 +476,12 @@ module.exports = function(RED) {
             "./node-red-mcu/main.js": "./main.js", 
             "./node-red-mcu/manifest.json": "./manifest.json",
             "./node-red-mcu/nodered.js": "./nodered.js",
+            "./node-red-mcu/nodered.c": "./nodered.c",
             "./node-red-mcu/nodes": "./nodes"
         }
         
         // make the flows.js file
+        /*
         let nodes = [];
         RED.nodes.eachNode(function(n) {
             if (n._mcu) {
@@ -488,7 +490,20 @@ module.exports = function(RED) {
         });
         let flowsjs = "const flows=" + JSON.stringify(nodes, null, 2) + ";\r\n";
         flowsjs+= "export default Object.freeze(flows, true);"
-        
+        */
+
+        // make the flows.json file
+        let nodes = [];
+        RED.nodes.eachNode(function(n) {
+            if (n._mcu) {
+                nodes.push(n);
+            }
+        });
+
+        // in case this is going to be changed again ;)
+        let flows_file_data = JSON.stringify(nodes, null, 2)
+        let flows_file_name = "flows.json"
+
         let error;
         let dest = fs.mkdtempSync(path.join(os.tmpdir(), app_name));
     
@@ -503,7 +518,7 @@ module.exports = function(RED) {
             fs.copySync(source,target);
         }
     
-        fs.writeFileSync(path.join(dest, 'flows.js'), flowsjs, (err) => {
+        fs.writeFileSync(path.join(dest, flows_file_name), flows_file_data, (err) => {
             if (err) {
                 throw err;
             }
