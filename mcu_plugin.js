@@ -248,13 +248,13 @@ module.exports = function(RED) {
 
 
     function persist_cache(data) {
-        console.log("persist_cache", data)
+        // console.log("persist_cache", data)
         if (!data) {
             data = mcu_plugin_config.cache_data;
         } else {
             mcu_plugin_config.cache_data = data;
         }
-        console.log("cache_data", mcu_plugin_config.cache_data);
+        // console.log("cache_data", mcu_plugin_config.cache_data);
 
         let cache_data = JSON.stringify(data);
         fs.writeFile(mcu_plugin_config.cache_file, cache_data, err => {
@@ -674,7 +674,7 @@ module.exports = function(RED) {
                 return;
                 if (data && data.payload) {
                     if (data.payload.state === "start" && data.payload.deploy === true) {
-                        console.log(data);
+                        // console.log(data);
 
                         console.log("Building NOW the MCU App.")
 
@@ -683,7 +683,7 @@ module.exports = function(RED) {
                             proxy.disconnect();
                             delete proxy;
                         }
-                        console.log(mcuProxy);
+                        // console.log(mcuProxy);
 
                         proxy = new mcuProxy.proxy();
 
@@ -823,7 +823,7 @@ module.exports = function(RED) {
 
 
             RED.httpAdmin.get(`${apiRoot}/config`, routeAuthHandler, (req, res) => {
-                console.log("cache_data", mcu_plugin_config.cache_data)
+                // console.log("cache_data", mcu_plugin_config.cache_data)
                 let c = {
                     "config": mcu_plugin_config.cache_data
                 }
@@ -848,7 +848,7 @@ module.exports = function(RED) {
             })
 
             RED.httpAdmin.post(`${apiRoot}/config`, routeAuthHandler, (req, res) => {
-                console.log(req.body);
+                // console.log(req.body);
                 let config;
                 if (req.body && req.body.config) {
                     config = req.body.config;
