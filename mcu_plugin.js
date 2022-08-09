@@ -2,6 +2,7 @@ const { exec } = require('node:child_process');
 const fs = require('fs-extra');
 const os = require("os");
 const path = require("path");
+const {SerialPort} = require("serialport");
 
 const app_name = "node-red-mcu-plugin";
 const build_cmd = "mcconfig -d -m -p mac"
@@ -12,6 +13,14 @@ let flows2build = [];
 let proxy;
 
 let error_header = "*** Error while loading node-red-mcu-plugin:"
+
+const mcu_plugin_config = {
+//    "simulators": {},
+    "platforms": [],
+    "cache_file": "",
+    "cache_data": []
+}
+
 
 module.exports = function(RED) {
 
@@ -211,14 +220,253 @@ module.exports = function(RED) {
     }
     // *****
 
+
+    // *****
+    // File to persist plugin data
+    function get_cache() {
+        let cache_file = path.join(RED.settings.userDir, "mcu-plugin-cache", "cache.json");
+        fs.ensureFileSync(cache_file);
+        let cache_data;
+        try {
+            cache_data = fs.readFileSync(cache_file, 'utf8');
+        } catch (err) {
+            RED.log.error("node-red-mcu-plugin: Failed to open cache file @ " + cache_file);
+        } finally {
+            cache_data = (cache_data.length > 0) ? cache_data : "[]"
+        }
+
+        try {
+            cache_data = JSON.parse(cache_data) || {};
+        } catch (err) {
+            RED.log.warn("node-red-mcu-plugin: Cache file corrupted @ " + cache_file);
+        }
+
+        mcu_plugin_config.cache_file = cache_file;
+        mcu_plugin_config.cache_data = cache_data;
+
+    }
+
+
+    function persist_cache(data) {
+        console.log("persist_cache", data)
+        if (!data) {
+            data = mcu_plugin_config.cache_data;
+        } else {
+            mcu_plugin_config.cache_data = data;
+        }
+        console.log("cache_data", mcu_plugin_config.cache_data);
+
+        let cache_data = JSON.stringify(data);
+        fs.writeFile(mcu_plugin_config.cache_file, cache_data, err => {
+            if (err) {
+                RED.log.warn("node-red-mcu-plugin: Failed to persist config to cache @ " + mcu_plugin_config.cache_file);
+            }
+        })
+    }
+
+    get_cache();
+
+    // End: "File ..."
+    // *****
+
+
+    // *****
+    // Collect some info regarding the MODDABLE toolkit
+
+    // https://stackoverflow.com/questions/18112204/get-all-directories-within-directory-nodejs
+    function getDirectories(parent_dir) {
+        return fs.readdirSync(parent_dir).filter(function (file) {
+            return fs.statSync(path.join(parent_dir,file)).isDirectory();
+        });
+      }
+
+    const MODDABLE = process.env.MODDABLE
+
+    {
+        // Those are the available platforms we are aware of:
+        let platform_identifiers = [
+            'esp/8285',
+            'esp/adafruit_oled',
+            'esp/adafruit_st7735',
+            'esp/buydisplay_ctp',
+            'esp/crystalfontz_monochrome_epaper',
+            'esp/esp8266_st7789',
+            'esp/generic_square_huzzah',
+            'esp/moddable_display_1',
+            'esp/moddable_display_3',
+            'esp/moddable_one',
+            'esp/moddable_three',
+            'esp/moddable_zero',
+            'esp/nodemcu',
+            'esp/sharp_memory',
+            'esp/sharp_memory_square',
+            'esp/sparkfun_teensyview',
+            'esp/switch_science_reflective_lcd',
+            'esp32/esp32_st7789',
+            'esp32/esp32_thing',
+            'esp32/esp32_thing_plus',
+            'esp32/esp32c3',
+            'esp32/esp32s3',
+            'esp32/heltec_lora_32',
+            'esp32/heltec_wifi_kit_32',
+            'esp32/kaluga',
+            'esp32/lilygo_t5s',
+            'esp32/lilygo_ttgo',
+            'esp32/m5atom_echo',
+            'esp32/m5atom_lite',
+            'esp32/m5atom_matrix',
+            'esp32/m5core_ink',
+            'esp32/m5paper',
+            'esp32/m5stack',
+            'esp32/m5stack_core2',
+            'esp32/m5stack_fire',
+            'esp32/m5stick_c',
+            'esp32/moddable_display_2',
+            'esp32/moddable_two',
+            'esp32/moddable_two_io',
+            'esp32/moddable_zero',
+            'esp32/nodemcu',
+            'esp32/oddwires',
+            'esp32/saola_wroom',
+            'esp32/saola_wrover',
+            'esp32/wemos_oled_lolin32',
+            'esp32/wrover_kit',
+            'gecko/blue',
+            'gecko/giant',
+            'gecko/mighty',
+            'gecko/thunderboard',
+            'gecko/thunderboard2',
+            'pico/captouch',
+            'pico/ili9341',
+            'pico/pico_display',
+            'pico/pico_display_2',
+            'pico/pico_lcd_1.3',
+            'qca4020/cdb'
+        ]
+
+        let platforms = [];
+        let platform_path = path.join(MODDABLE, "build", "devices");
+        let platforms_verified = platform_identifiers.slice(0); // deep copy
+        let p1 = getDirectories(platform_path);
+        let opener = true;
+        for (let i=0; i<p1.length; i+=1) {
+            let target_path = path.join(MODDABLE, "build", "devices", p1[i], "targets");
+            let p2 = getDirectories(target_path);
+            for (let ii=0; ii<p2.length; ii+=1) {
+                let p = p1[i]+"/"+p2[ii];
+                let io = platforms_verified.indexOf(p);
+                if (!(io < 0)) {
+                    platforms_verified.splice(io,1);
+                    platforms.push({value: p})
+                } else {
+                    if (opener) {
+                        RED.log.info("*** node-red-mcu-plugin:");
+                        RED.log.info("It looks as if a new platform option has been added.");
+                        RED.log.info("Please raise an issue @ our GitHub repository, stating the following information:");
+                        opener = false;
+                    }
+                    RED.log.info("> New platform:", p);
+                }
+            }
+        }
+        opener = true;
+        for (let i=0; i<platforms_verified.length; i+=1) {
+            if (opener) {
+                RED.log.info("*** node-red-mcu-plugin:");
+                RED.log.info("It looks as if a platform option has been removed.");
+                RED.log.info("Please raise an issue @ our GitHub repository, stating the following information:");
+                opener = false;
+            }
+            RED.log.info("> Verify platform:", platforms_verified[i]);
+            platform_identifiers.splice(platform_identifiers.indexOf(platforms_verified[i]), 1);
+        }
+        // console.log(platform_identifiers);
+        mcu_plugin_config.platforms = platforms;
+    }
+
+    {
+        // Those are the available sims we are aware of:
+        let simulator_identifiers = {
+            'sim/m5paper': "M5Paper",
+            'sim/m5stickc': "M5Stick",
+            'sim/moddable_one': "Moddable One",
+            'sim/moddable_two': "Moddable Two",
+            'sim/moddable_three': "Moddable Three",     // this order looks better 
+            'sim/nodemcu': "Node MCU",
+            'sim/pico_display': "Pico Display",
+            'sim/pico_display_2': "Pico Display2"
+        };
+
+        let platforms = mcu_plugin_config.platforms;
+        let simulator_path = path.join(MODDABLE, "build", "simulators");
+        let sims_verified = Object.keys(simulator_identifiers);
+        p1 = getDirectories(simulator_path);
+        let opener = true;
+        for (let i=0; i<p1.length; i+=1) {
+            let id = "sim/"+p1[i];
+            if (p1[i] !== "modules") {
+                if (!simulator_identifiers[id]) {
+                    if (opener) {
+                        RED.log.info("*** node-red-mcu-plugin:");
+                        RED.log.info("There seems to be an additional simulator option available.");
+                        RED.log.info("Please raise an issue @ our GitHub repository, stating the following information:");
+                        opener = false;    
+                    }
+                    RED.log.info("> New simulator:", id);
+                } else {
+                    sims_verified.splice(sims_verified.indexOf(id), 1);
+                    platforms.push({value: id, label: simulator_identifiers[id]})
+                }
+            }
+        }
+
+        opener = true;
+        for (let i=0; i<sims_verified.length; i+=1) {
+            if (opener) {
+                RED.log.info("*** node-red-mcu-plugin:");
+                RED.log.info("It looks as if a simulator option has been removed.");
+                RED.log.info("Please raise an issue @ our GitHub repository, stating the following information:");
+                opener = false;
+            }
+            RED.log.info("> Verify simulator:", sims_verified[i]);
+            delete simulator_identifiers[sims_verified[i]];
+        }
+
+        // console.log(simulator_identifiers);
+        mcu_plugin_config.platforms = platforms;
+    }
+
+    // End "Collect ..."
+    // *****
+
+    // *****
+    // The serial port scanner
+    function refresh_serial_ports(repeat) {
+        SerialPort.list().then( (p) => {
+            let ports = [];
+            for (let i=0; i<p.length; i+=1) {
+                if (p[i].path && p[i].path.length > 0) {
+                    ports.push(p[i].path);
+                }
+            }
+            ports.sort();
+            RED.comms.publish("mcu/serialports",  ports, true);
+
+            setTimeout(refresh_serial_ports, repeat, repeat);
+        })
+    }
+
+    refresh_serial_ports(5000);
+
+    // End: "The serial..."
+    // *****
+
     // *****
     // The plugin
 
     const apiRoot = "/mcu";
     const routeAuthHandler = RED.auth.needsPermission("mcu.write");
     console.log("MCU loaded.")
-
-
 
 
     function make_build_environment() {
@@ -265,7 +513,47 @@ module.exports = function(RED) {
     
     }
 
-    function build_and_run() {
+    function build_and_run(publish, options) {
+
+        options = options || {};
+        let cmd = "mcconfig"
+
+        if (options.debug === true) {
+            cmd += " -d";
+            cmd += " -x localhost:5004"
+        }
+
+        if (options.pixel) {
+            cmd += " -f " + options.pixel;
+        }
+
+        if (options.release === true) {
+            cmd += " -i"
+        }
+
+        if (options.make === true) {
+            cmd += " -m";
+        }
+
+        if (options.platform) {
+            cmd += " -p " + options.platform;
+        }
+
+        if (options.rotation) {
+            cmd += " -r " + options.rotation;
+        }
+
+        if (options.buildtarget) {
+            cmd += " -t " + options.buildtarget;
+        }
+
+        if (options.arguments) {
+
+            let args = JSON.parse(options.arguments)
+            for (key in args) {
+                cmd += " " + key + '="' + args[key] + '"'
+            }
+        }
 
         return new Promise((resolve, reject) => {
 
@@ -274,11 +562,15 @@ module.exports = function(RED) {
     
             try {
                 let make_dir = make_build_environment();
-                console.log(make_dir);
+                // console.log(make_dir);
                 
-                patch_xs_file("5002", "5004");
-    
-                exec(build_cmd, {
+                // RDW 20220805: obsolete now
+                // patch_xs_file("5002", "5004");
+                
+                publish("mcu/stdout/test",  "cd " + make_dir, true); 
+                publish("mcu/stdout/test",  cmd, true); 
+
+                let builder = exec(cmd, {
                     cwd: make_dir,
                 }, (err, stdout, stderr) => {
             
@@ -295,6 +587,8 @@ module.exports = function(RED) {
     
                     // console.log(msg);
 
+                    // RDW 20220805: obsolete now
+                    /*
                     try {
                         patch_xs_file("5004", "5002");
                     }
@@ -304,13 +598,22 @@ module.exports = function(RED) {
                         }
                         msg.error['patch_error'] = error; 
                     }
-                    
+                    */
+
                     if (msg.error) {
                         reject(msg)
                     }
 
                     resolve(msg);
-                })
+                });
+
+                builder.stdout.on('data', function(data) {
+                    publish("mcu/stdout/test", data, true); 
+                });
+                builder.stderr.on('data', function(data) {
+                    publish("mcu/stdout/test", data, true); 
+                });
+
             } catch (err) {
                 console.log("@catch (err)")
                 msg.error = {};
@@ -318,6 +621,8 @@ module.exports = function(RED) {
                     msg.error[e] = err[e];
                 }
     
+                // RDW 20220805: obsolete now
+                /*
                 try {
                     patch_xs_file("5004", "5002");
                 }
@@ -326,7 +631,8 @@ module.exports = function(RED) {
                         msg.error = {};
                     }
                     msg.error['patch_error'] = error; 
-                }    
+                }
+                */
 
                 console.log("Error:", msg);
 
@@ -337,6 +643,7 @@ module.exports = function(RED) {
         })
     }
     
+
     RED.plugins.registerPlugin("node-red-mcu", {
         onadd: () => {
             console.log("MCU added.")
@@ -400,9 +707,21 @@ module.exports = function(RED) {
                 }
             });
 
-            RED.httpAdmin.put(`${apiRoot}/build`, routeAuthHandler, (req, res) => {
+            RED.httpAdmin.post(`${apiRoot}/build`, routeAuthHandler, (req, res) => {
                 
                 console.log("@manual_build")
+
+                let build_options = req.body.options
+                if (!build_options) {
+                    res.status(400).end();
+                    return;
+                }
+
+                // *** Is this a valid assumption?
+                if (!build_options.make) {
+                    build_options.make = true;
+                }
+                // ***
 
                 // create the proxy to the MCU / Simulator
                 if (proxy) {
@@ -445,18 +764,19 @@ module.exports = function(RED) {
                 // .then(msg => { console.log(msg) })
                 // .catch(msg => {console.log("error @ build_and_run", msg)});
 
-                return build_and_run()
+                return build_and_run(RED.comms.publish, build_options)
                 .then((msg) => {
-                    console.log("after build", msg)
+                    // console.log("after build", msg)
                     if (msg.error) {
                         res.status(500).end();
                     } else {
                         res.status(200).end();
                     }
-                })/*
+                })
                 .catch((err) => {
-                    console.log("Promise:", err);
-                })*/
+                    // RED.comms.publish("mcu/stdout/test", "__flash_console", true)
+                    res.status(400).end();
+                })
 
                 /*
                     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), app_name));
@@ -487,6 +807,45 @@ module.exports = function(RED) {
             });
 
 
+            RED.httpAdmin.get(`${apiRoot}/config`, routeAuthHandler, (req, res) => {
+                console.log("cache_data", mcu_plugin_config.cache_data)
+                let c = {
+                    "config": mcu_plugin_config.cache_data
+                }
+                // refresh_serial_ports();
+                res.status(200).end(JSON.stringify(c), "utf8")
+            })
+
+            RED.httpAdmin.get(`${apiRoot}/config/targets`, routeAuthHandler, (req, res) => {
+                let c = {
+                    // "simulators": mcu_plugin_config.simulators,
+                    "platforms": mcu_plugin_config.platforms
+                }
+                res.status(200).end(JSON.stringify(c), "utf8")
+            })
+
+            RED.httpAdmin.get(`${apiRoot}/config/ports`, routeAuthHandler, (req, res) => {
+                let c = {
+                    "ports": mcu_plugin_config.ports,
+                }
+                // refresh_serial_ports();
+                res.status(200).end(JSON.stringify(c), "utf8")
+            })
+
+            RED.httpAdmin.post(`${apiRoot}/config`, routeAuthHandler, (req, res) => {
+                console.log(req.body);
+                let config;
+                if (req.body && req.body.config) {
+                    config = req.body.config;
+                } else {
+                    RED.log.error("node-red-mcu-plugin: Failed to parse incoming config data.");
+                    res.status(400).end();
+                    return;
+                }
+                persist_cache(config);
+                res.status(200).end();    
+            })
+            
 
 /*
             RED.httpAdmin.get(`${apiRoot}/test`, routeAuthHandler, (req, res) => {
