@@ -16,11 +16,12 @@ let error_header = "*** Error while loading node-red-mcu-plugin:"
 
 const mcu_plugin_config = {
 //    "simulators": {},
-    "platforms": [],
     "cache_file": "",
-    "cache_data": []
-}
+    "cache_data": [],
 
+    "platforms": [],
+    "ports": []
+}
 
 module.exports = function(RED) {
 
@@ -442,7 +443,8 @@ module.exports = function(RED) {
     // *****
     // The serial port scanner
     function refresh_serial_ports(repeat) {
-        SerialPort.list().then( (p) => {
+        SerialPort.list()
+        .then( (p) => {
             let ports = [];
             for (let i=0; i<p.length; i+=1) {
                 if (p[i].path && p[i].path.length > 0) {
@@ -450,7 +452,11 @@ module.exports = function(RED) {
                 }
             }
             ports.sort();
-            RED.comms.publish("mcu/serialports",  ports, true);
+            
+            mcu_plugin_config.ports = ports;
+
+            // ToDo: Check why the message is received several (==3) times at the client side?!
+            RED.comms.publish("mcu/serialports",  ports, false);
 
             setTimeout(refresh_serial_ports, repeat, repeat);
         })
@@ -582,8 +588,8 @@ module.exports = function(RED) {
                 // RDW 20220805: obsolete now
                 // patch_xs_file("5002", "5004");
                 
-                publish("mcu/stdout/test",  "cd " + make_dir, true); 
-                publish("mcu/stdout/test",  cmd, true); 
+                publish("mcu/stdout/test",  "cd " + make_dir, false); 
+                publish("mcu/stdout/test",  cmd, false); 
 
                 let builder = exec(cmd, {
                     cwd: make_dir,
@@ -623,10 +629,10 @@ module.exports = function(RED) {
                 });
 
                 builder.stdout.on('data', function(data) {
-                    publish("mcu/stdout/test", data, true); 
+                    publish("mcu/stdout/test", data, false); 
                 });
                 builder.stderr.on('data', function(data) {
-                    publish("mcu/stdout/test", data, true); 
+                    publish("mcu/stdout/test", data, false); 
                 });
 
             } catch (err) {
@@ -754,6 +760,8 @@ module.exports = function(RED) {
                         source: { id: '799b7e8fcf64e1fa', type: 'debug', name: 'debug 4' }
                     } */
         
+                    console.log(data);
+
                     let status = {};
         
                     let fill = data.fill;
@@ -765,7 +773,7 @@ module.exports = function(RED) {
                     if (text) { status["text"] = text;}
         
                     if (data.source && data.source.id) {
-                        // console.log("Emitting to " + data.source.id);
+                        console.log("Emitting to " + data.source.id);
                         RED.events.emit("node-status",{
                             "id": data.source.id,
                             "status": status
@@ -831,14 +839,16 @@ module.exports = function(RED) {
                 res.status(200).end(JSON.stringify(c), "utf8")
             })
 
-            RED.httpAdmin.get(`${apiRoot}/config/targets`, routeAuthHandler, (req, res) => {
+            RED.httpAdmin.get(`${apiRoot}/config/plugin`, routeAuthHandler, (req, res) => {
                 let c = {
                     // "simulators": mcu_plugin_config.simulators,
-                    "platforms": mcu_plugin_config.platforms
+                    "platforms": mcu_plugin_config.platforms,
+                    "ports": mcu_plugin_config.ports
                 }
                 res.status(200).end(JSON.stringify(c), "utf8")
             })
 
+            /*
             RED.httpAdmin.get(`${apiRoot}/config/ports`, routeAuthHandler, (req, res) => {
                 let c = {
                     "ports": mcu_plugin_config.ports,
@@ -846,6 +856,7 @@ module.exports = function(RED) {
                 // refresh_serial_ports();
                 res.status(200).end(JSON.stringify(c), "utf8")
             })
+            */
 
             RED.httpAdmin.post(`${apiRoot}/config`, routeAuthHandler, (req, res) => {
                 // console.log(req.body);
