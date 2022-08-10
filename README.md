@@ -10,6 +10,7 @@ The plugin adds a side panel labeled "MCU".
     style="min-width: 474px; width: 474px; align: center; border: 1px solid lightgray;"/>
 
 The top section of this side panel allows to select the flows that shall be build for the MCU environment.
+Please be aware that **you have to deploy the selected flows** after you've made your choice.
 
 In the bottom section of the side panel, several configurations defining compiler options may be prepared. This allows e.g. to select the target platform or the port used to address a dedicated hardware device. For option reference, see the `mcconfig` [documentation](https://github.com/Moddable-OpenSource/moddable/blob/public/documentation/tools/tools.md#arguments) of the Moddable SDK.
 
@@ -23,8 +24,8 @@ You may follow the build process on the tab `Console Monitor`.
 - [x] UI to define build parameters.
 - [x] Console monitor - to follow the build process.
 - [x] Display status message of a node (running @ MCU) in the editor.
-- [x] Display debug message of a node (running @ MCU) in the editor.
 - [x] Forward user trigger (e.g. `inject` node) to MCU.
+- [ ] Debug node (from MCU back into the editor).
 
 ## Test Case
 We're able to run this (currently minimalistic) flow @ the MCU simulator and display it's feedback into the Node-RED editor.
