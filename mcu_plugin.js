@@ -26,6 +26,22 @@ const mcu_plugin_config = {
 module.exports = function(RED) {
 
     // *****
+    // Ensure that MODDABLE is defined
+    
+    const MODDABLE = process.env.MODDABLE;
+
+    if (!MODDABLE || !fs.existsSync(MODDABLE)) {
+        RED.log.error("*** node-red-mcu-plugin:");
+        RED.log.error("Environment variable $MODDABLE is not defined or stating a non-existing path.");
+        RED.log.error("Please install the Moddable SDK according to its Getting Started Guide:");
+        RED.log.error("https://github.com/Moddable-OpenSource/moddable/blob/public/documentation/Moddable%20SDK%20-%20Getting%20Started.md");
+        return;
+    }
+    
+    // End "Ensure ..."
+    // *****
+    
+    // *****
     // Hook node definitions
 
     function mcu_inject(config) {
@@ -279,9 +295,7 @@ module.exports = function(RED) {
         return fs.readdirSync(parent_dir).filter(function (file) {
             return fs.statSync(path.join(parent_dir,file)).isDirectory();
         });
-      }
-
-    const MODDABLE = process.env.MODDABLE
+    }
 
     {
         // Those are the available platforms we are aware of:
