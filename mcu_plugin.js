@@ -37,6 +37,29 @@ module.exports = function(RED) {
         RED.log.error("https://github.com/Moddable-OpenSource/moddable/blob/public/documentation/Moddable%20SDK%20-%20Getting%20Started.md");
         return;
     }
+
+    {
+        const platform_modifier = {
+            darwin: "mac",
+            linux: "lin",
+            win32: "win"
+        }
+
+        let pm = platform_modifier[process.platform];
+        if (!pm) {
+            RED.log.error("*** node-red-mcu-plugin -> Error!");
+            RED.log.error("* Running on a platform not supported:");
+            RED.log.error(`* process.platform = "${process.platform}"`);
+            RED.log.error("*** node-red-mcu-plugin -> Runtime setup canceled.");
+            return;
+        }
+
+        let moddable_tools_path = path.join(MODDABLE, "build", "bin", pm, "release");
+
+        if (process.env.PATH.indexOf(moddable_tools_path) < 0) {
+            process.env.PATH += (process.platform === "win32" ? ";" : ":") + moddable_tools_path;
+        }
+    }
     
     // End "Ensure ..."
     // *****
