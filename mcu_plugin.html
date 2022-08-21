@@ -38,19 +38,9 @@
 (function() {
 
     
-    // require(node-teminal-simulator);
-
-    if (!RED.view.annotations) {
-        RED.notify("Flow Debugger requires Node-RED 2.0.0-beta.2 or later");
-        return;
-    }
-    var MAX_MESSAGE_LOADED = 10;
     var sidebarContent;
-    var activeMessageFilter = 'all';
-
     var treeList;
     var objects = {};
-    var missingParents = {};
 
     let flowData = [];
     let flowList = flowData;
@@ -171,17 +161,6 @@
         delete objects[n.id]
     }
     
-    RED.events.on("flows:add", onFlowAdd)
-    RED.events.on("flows:remove", onObjectRemove)
-    RED.events.on("flows:change", onFlowChange)
-    RED.events.on("flows:reorder", onFlowsReorder)
-
-
-    RED.events.on("sidebar:resize", function() {
-        console.log("resizing")
-    })
-
-
 
     function resize_sidebar(top, bottom) {
 
@@ -291,356 +270,402 @@
         "ports": []
     };
     
-    $.get({
-        url: "mcu/config/plugin",
-        contentType: "application/json",
-        success: function(resp) {
-            // buildButton.toggleClass("disabled",!debuggerEnabled);
-            // console.log("success");
-            
-            let response;   // {targets: [{...}]}
-            try {
-                response = JSON.parse(resp);
-            } catch (err) {
-            }
-
-            for (key in mcu_plugin_config) {
-                if (key in response) {
-                    mcu_plugin_config[key] = response[key];
-                }
-            }
-
-        },
-        error: function(jqXHR,textStatus,errorThrown) {
-            // ToDo: Check if necessary!
-            flashTab("__console__");
-        }
-    });
 
     RED.plugins.registerPlugin("node-red-mcu", {
+        
         onadd: function() {
 
-            
-            RED.comms.subscribe("mcu/stdout/#", function(topic, msg) {
+            // We use this to check if the runtime side of node-re-mcu-plugin
+            // is up & running. If not, we'll cancel registerPlugin!
+            new Promise((resolve, reject) => {
+                $.get({
+                    url: "mcu/config/plugin",
+                    contentType: "application/json",
+                    success: function (response) {
+                        resolve(response);
+                    },
+                    error: function (error) {
+                        reject(error);
+                    }
+                });
+            })
+            .then((data) => {
+                let incoming_config; // {targets: [{...}]}
+                try {
+                    incoming_config = JSON.parse(data);
+                } catch (err) {
+                    console.error("node-red-mcu-plugin: Failed to parse JSON config data. Setup canceled.")
+                    return;
+                }
 
-                let mcuc = $("#mcu_console");
-
-                // If the textarea is initially scrolled to its bottom position...
-                var at_the_bottom = (mcuc[0].scrollHeight - mcuc.scrollTop() - mcuc[0].clientHeight < 8);
-
-                msg = msg.trim();
-
-               // var msgs = d[key];
-                if (msg.length > 0) {
-
-                    if (msg == "__flash_console") {
-                        flashTab("__console__")
-                    } else {
-                        let text = mcuc.val()
-                        if (text.length > 0) {
-                            text += '\r\n';
-                        }
-                        // console.log(msg, msg.charCodeAt(msg.length-1));
-                        // text += msg.join('\r\n');
-                        text += msg;
-                        mcuc.val(text);
-                        if (at_the_bottom) {
-                            // ... we scroll it there afterwards again.
-                            mcuc.scrollTop(mcuc[0].scrollHeight);
-                        }
+                for (key in mcu_plugin_config) {
+                    if (key in incoming_config) {
+                        mcu_plugin_config[key] = incoming_config[key];
                     }
                 }
-                // console.log(topic, msg);
-            });
 
+                try {
+                    _onAdd();
+                }
+                catch(error) {
+                    console.error(error);
+                }
+                
+            })
+            .catch((error) => {
+                console.log(error);
+                console.error("node-red-mcu-plugin: Runtime module not responding. Setup canceled.")
+            })
 
-            RED.comms.subscribe("mcu/serialports", function(topic, msg) {
-                let ports = mcu_plugin_config.ports;
-                let changed = false;
-                for (let i=0; i<msg.length; i+=1) {
-                    if (ports.length < i-1) {
-                        ports.push(msg[i]);
-                        changed = true;
-                    } else if (ports[i] !== msg[i]) {
-                        ports[i] = msg[i];
-                        changed = true;
+            return;
+        }
+    })
+
+    function _onAdd() {
+
+        RED.events.on("flows:add", onFlowAdd)
+        RED.events.on("flows:remove", onObjectRemove)
+        RED.events.on("flows:change", onFlowChange)
+        RED.events.on("flows:reorder", onFlowsReorder)
+
+        RED.comms.subscribe("mcu/stdout/#", function (topic, msg) {
+
+            let mcuc = $("#mcu_console");
+
+            // If the textarea is initially scrolled to its bottom position...
+            var at_the_bottom = (mcuc[0].scrollHeight - mcuc.scrollTop() - mcuc[0].clientHeight < 8);
+
+            msg = msg.trim();
+
+            // var msgs = d[key];
+            if (msg.length > 0) {
+
+                if (msg == "__flash_console") {
+                    flashTab("__console__")
+                } else {
+                    let text = mcuc.val()
+                    if (text.length > 0) {
+                        text += '\r\n';
+                    }
+                    // console.log(msg, msg.charCodeAt(msg.length-1));
+                    // text += msg.join('\r\n');
+                    text += msg;
+                    mcuc.val(text);
+                    if (at_the_bottom) {
+                        // ... we scroll it there afterwards again.
+                        mcuc.scrollTop(mcuc[0].scrollHeight);
                     }
                 }
-                if (msg.length < ports.length) {
-                    ports.length = msg.length;
+            }
+            // console.log(topic, msg);
+        });
+
+
+        RED.comms.subscribe("mcu/serialports", function (topic, msg) {
+            let ports = mcu_plugin_config.ports;
+            let changed = false;
+            for (let i = 0; i < msg.length; i += 1) {
+                if (ports.length < i - 1) {
+                    ports.push(msg[i]);
+                    changed = true;
+                } else if (ports[i] !== msg[i]) {
+                    ports[i] = msg[i];
                     changed = true;
                 }
-                if (changed) {
-                    RED.events.emit("mcu:validate-ports");
+            }
+            if (msg.length < ports.length) {
+                ports.length = msg.length;
+                changed = true;
+            }
+            if (changed) {
+                RED.events.emit("mcu:validate-ports");
+            }
+        })
+
+        let flows2build = [];
+
+
+        // Patch mcu flag into the defaults of any type
+        // This is a prerequisite as the NR editor only forwards properties to the runtime,
+        // that are defined in the defaults.
+        function patch_node_type_for_mcu(nt) {
+
+            let t = RED.nodes.getType(nt);
+            if (!t) return;
+
+            t.defaults["_mcu"] = { value: false }
+
+            // Patch the onadd function of nodes to take over the flow's _mcu status
+            if (nt !== "tab") {
+                let onadd_orig = t.onadd;
+                t.onadd = function() {
+                    let n = this;
+                    if (n && n.type !== "tab" && n.z) {
+                        n._mcu = (RED.nodes.workspace(n.z)?._mcu === true) ?? false;
+                    }
+                    if (!onadd_orig) return;
+                    return onadd_orig.call(n);
+                }
+            }
+
+            t = RED.nodes.getType(nt);
+            if (!t.defaults._mcu) {
+                console.log("MCU: Failed to patch type '" + nt + "'.")
+            }
+        }
+
+        // First for the nodes...
+        RED.events.on("registry:node-type-added", function (nt) {
+            patch_node_type_for_mcu(nt);
+        });
+
+        // Same for the flow...
+        patch_node_type_for_mcu("tab");
+
+        content = document.createElement("div");
+        content.className = "red-ui-sidebar-info"
+
+        let stackContainer = $("<div>", { class: "red-ui-sidebar-info-stack" }).appendTo(content);
+
+        selectorPanel = $("<div>").css({
+            "overflow": "hidden",
+            "height": "calc(70%)"
+        }).appendTo(stackContainer);
+        let selectorPanelHeader = $("<div>", { class: "red-ui-sidebar-header" }).css({ "text-align": "left" }).appendTo(selectorPanel);
+        $("<span>").text("Flows to build for MCU").css({ width: "100%", "text-align": "left", "font-weight": "bold" }).appendTo(selectorPanelHeader);
+
+        buildPanel = $("<div>").css({
+            "overflow": "hidden",
+            "height": "100%",
+            "min-height": "50px"
+            //"display": "flex",
+            //"flex-direction": "column"
+        }).appendTo(stackContainer);
+        buildPanelHeader = $("<div>", { class: "red-ui-sidebar-header" }).css({ "text-align": "left" }).appendTo(buildPanel);
+
+
+        let buildPanelHeaderLeft = $('<span>').css({ "flex-grow": "1", "text-align": "left" }).appendTo(buildPanelHeader);
+        let buildPanelHeaderRight = $('<span>').css({ "display": "unset" }).appendTo(buildPanelHeader);
+
+        // $("<span>").css({height: "100%", "vertical-align": "middle", display: "inline-block"}).appendTo(buildPanelHeaderLeft); 
+        $("<span>").text("MCU Build Configurations").css({ "text-align": "left", "font-weight": "bold", "vertical-align": "middle", display: "inline-block" }).appendTo(buildPanelHeaderLeft);
+        // $("<span>").text("MCU Build Setup").appendTo(buildPanelHeaderLeft);
+
+        tabsContainer = $('<div>', { class: "tabs-container" }).css({ "position": "absolute", "top": "calc(100% - 35px)", "width": "100%" }).appendTo(buildPanel);
+        let buildTabs = $('<ul>', { id: "tabs-tabs" }).appendTo(tabsContainer);
+
+        panels = RED.panels.create({
+            container: stackContainer,
+            /*
+            resize: function(size_top, size_bottom) {
+                if (size_bottom < 100) {
+                    panels.resize(size_top + size_bottom - 100, 100);
+                }
+            }
+            */
+            resize: function (top, bottom) {
+                resize_sidebar(top, bottom);
+            }
+        })
+        // RED.sidebar.info.outliner.build().appendTo(outlinerPanel);
+
+        function resize_panels() {
+            if (panels) {
+                var h = $(content).parent().height();
+                panels.resize(h);
+            }
+        }
+
+        RED.events.on("sidebar:resize", resize_panels);
+        $(window).on("resize", resize_panels);
+        $(window).on("focus", resize_panels);
+
+        // the flows treeList
+        flowSelector = $("<div>").css({ width: "100%", height: "inherit" }).appendTo(selectorPanel);
+        flowSelector.treeList({
+            // data:getFlowData(),
+            data: flowData,
+            multi: true,
+        }).on('treelistselect', function (event, item) {
+
+            let selected = flowSelector.treeList("selected")
+            let f2b = [];
+
+            for (let ii = 0; ii < selected.length; ii += 1) {
+                let s = selected[ii];
+                f2b.push(s.id);
+            }
+
+            // TODO: This should be UNDOable!
+            let changed = false;
+            let f2bl = f2b.length;
+
+            RED.nodes.eachWorkspace(function (ws) {
+
+                // c === 3: node has flag but need none; remove it
+                // c === 2: node got mcu flag
+                // c === 1: node already has flag
+                // c === 0: node has no flag nor needs one
+                let c = 0;
+
+                for (let i = 0; i < f2bl; i += 1) {
+                    // mark the flow
+                    if (ws.id && ws.id === f2b[i]) {
+                        if (ws._mcu === true) {
+                            c = 1;
+                        } else {
+                            c = 2;
+                        }
+                        break;
+                    }
+                }
+
+                if (c > 0) {
+                    ws._mcu = true;
+                }
+                if (c < 1 && ws._mcu) {
+                    delete ws._mcu;
+                    c = 3;
+                }
+                if (c > 1) {
+                    ws.changed = true;
+                    RED.events.emit("flows:change", ws);
+                    changed = true;
                 }
             })
 
-            let flows2build = [];
+            RED.nodes.eachNode(function (node) {
 
-            function patch_node_type_for_mcu(nt) {
-                let t = RED.nodes.getType(nt);
-                t.defaults["_mcu"] = {value: false}
-                t = RED.nodes.getType(nt);            
-                if (!t.defaults._mcu) {
-                    console.log("MCU: Failed to patch type '" + nt + "'.")
-                }
-            }
+                // c === 3: node has flag but need none; remove it
+                // c === 2: node got mcu flag
+                // c === 1: node already has flag
+                // c === 0: node has no flag nor needs one
+                let c = 0;
 
-            // Patch mcu flag into the defaults of any type
-            // This is a prerequisite as the NR editor only forwards properties to the runtime,
-            // that are defined in the defaults.
-            RED.events.on("registry:node-type-added", function(nt) {
-                patch_node_type_for_mcu(nt);
-            });
+                for (let i = 0; i < f2bl; i += 1) {
 
-            // Same for the flow...
-            patch_node_type_for_mcu("tab");
-
-            content = document.createElement("div");
-            content.className = "red-ui-sidebar-info"
-
-            let stackContainer = $("<div>",{class:"red-ui-sidebar-info-stack"}).appendTo(content);
-
-            selectorPanel = $("<div>").css({
-                "overflow": "hidden",
-                "height": "calc(70%)"
-            }).appendTo(stackContainer);
-            let selectorPanelHeader = $("<div>", {class:"red-ui-sidebar-header"}).css({"text-align": "left"}).appendTo(selectorPanel);
-            $("<span>").text("Flows to build for MCU").css({width: "100%", "text-align": "left", "font-weight": "bold"}).appendTo(selectorPanelHeader);
-
-            buildPanel = $("<div>").css({
-                "overflow":"hidden",
-                "height":"100%",
-                "min-height": "50px"
-                //"display": "flex",
-                //"flex-direction": "column"
-            }).appendTo(stackContainer);
-            buildPanelHeader = $("<div>", {class:"red-ui-sidebar-header"}).css({"text-align": "left"}).appendTo(buildPanel);
-
-
-            let buildPanelHeaderLeft = $('<span>').css({"flex-grow": "1", "text-align":"left"}).appendTo(buildPanelHeader);
-            let buildPanelHeaderRight = $('<span>').css({"display":"unset"}).appendTo(buildPanelHeader);
-
-            // $("<span>").css({height: "100%", "vertical-align": "middle", display: "inline-block"}).appendTo(buildPanelHeaderLeft); 
-            $("<span>").text("MCU Build Configurations").css({"text-align": "left", "font-weight": "bold", "vertical-align": "middle", display: "inline-block"}).appendTo(buildPanelHeaderLeft);
-            // $("<span>").text("MCU Build Setup").appendTo(buildPanelHeaderLeft);
-
-            tabsContainer = $('<div>', {class:"tabs-container"}).css({"position": "absolute", "top": "calc(100% - 35px)", "width": "100%"}).appendTo(buildPanel);
-            let buildTabs = $('<ul>', {id: "tabs-tabs"}).appendTo(tabsContainer);
-
-            panels = RED.panels.create({
-                container: stackContainer,
-                /*
-                resize: function(size_top, size_bottom) {
-                    if (size_bottom < 100) {
-                        panels.resize(size_top + size_bottom - 100, 100);
+                    // mark the nodes
+                    if (node.z && node.z === f2b[i]) {
+                        if (node._mcu === true) {
+                            c = 1;
+                        } else {
+                            c = 2;
+                        }
+                        break;
                     }
                 }
-                */
-                resize: function(top, bottom) {
-                    resize_sidebar(top, bottom);
+
+                if (c > 0) {
+                    node._mcu = true;
+                }
+                if (c < 1 && node._mcu) {
+                    delete node._mcu;
+                    c = 3;
+                }
+                if (c > 1) {
+                    node.changed = true;
+                    RED.events.emit("nodes:change", node);
+                    changed = true;
                 }
             })
-            // RED.sidebar.info.outliner.build().appendTo(outlinerPanel);
 
-            function resize_panels() {
-                if (panels) {
-                    var h = $(content).parent().height();
-                    panels.resize(h);
-                }
+            if (changed) {
+                RED.nodes.dirty(true);
+                RED.view.updateActive();
+                RED.view.redraw(true);
             }
 
-            RED.events.on("sidebar:resize", resize_panels);
-            $(window).on("resize", resize_panels);
-            $(window).on("focus", resize_panels);
+            flows2build = f2b;
+
+        });
+
+        RED.sidebar.addTab({
+            id: "node-red-mcu",
+            label: "MCU",
+            name: "Node-Red MCU",
+            iconClass: "fa fa-microchip",
+            content: content,
+            // toolbar: footerToolbar,
+            enableOnEdit: true,
+            // action: "core:show-flow-debugger-tab"
+        });
 
 
-            // the flows treeList
-            flowSelector = $("<div>").css({width: "100%", height: "inherit"}).appendTo(selectorPanel);
-            flowSelector.treeList({
-                // data:getFlowData(),
-                data: flowData,
-                multi: true,
-            }).on('treelistselect', function(event, item) {
+        let console_container;
+        let config_container;
 
-                let selected = flowSelector.treeList("selected")
-                let f2b = [];
+        tabs = RED.tabs.create({
+            id: "tabs-tabs",
+            vertical: false,
+            scrollable: true,
+            /*
+            addButton: function () {
+                let tpl = addTemplate();
+                let tab_id = addTemplateTab(tpl);
+                tabs.activateTab(tab_id);
+                self.changed = true;
+            }, 
+            addButtonCaption: "Add new template", */
+            onchange: function (tab) {
 
-                for (let ii=0; ii<selected.length; ii+=1) {
-                    let s = selected[ii];
-                    f2b.push(s.id);
+                if (console_container) {
+                    if (tab.id == "__console__") {
+                        console_container.show();
+                    } else {
+                        console_container.hide();
+                    }
                 }
 
-                // TODO: This should be UNDOable!
-                let changed = false;
-                let f2bl = f2b.length;
-
-                RED.nodes.eachWorkspace(function(ws) {
-
-                    // c === 3: node has flag but need none; remove it
-                    // c === 2: node got mcu flag
-                    // c === 1: node already has flag
-                    // c === 0: node has no flag nor needs one
-                    let c = 0;
-
-                    for (let i=0; i<f2bl; i+=1) {
-                        // mark the flow
-                        if (ws.id && ws.id===f2b[i]) {
-                            if (ws._mcu===true) {
-                                c = 1;
-                            } else {
-                                c = 2;
-                            }
-                            break;
-                        }
+                if (config_container) {
+                    if (tab.id != "__console__") {
+                        config_container.show();
+                    } else {
+                        config_container.hide();
                     }
-
-                    if (c>0) {
-                        ws._mcu = true;
-                    }
-                    if (c<1 && ws._mcu) {
-                        delete ws._mcu;
-                        c = 3;
-                    } 
-                    if (c>1) {
-                        ws.changed = true;
-                        RED.events.emit("flows:change",ws);
-                        changed = true;
-                    }
-                })
-
-                RED.nodes.eachNode(function(node){
-                    
-                    // c === 3: node has flag but need none; remove it
-                    // c === 2: node got mcu flag
-                    // c === 1: node already has flag
-                    // c === 0: node has no flag nor needs one
-                    let c = 0;
-
-                    for (let i=0; i<f2bl; i+=1) {
-
-                        // mark the nodes
-                        if (node.z && node.z===f2b[i]) {
-                            if (node._mcu===true) {
-                                c = 1;
-                            } else {
-                                c = 2;
-                            }
-                            break;
-                        }
-                    }
-
-                    if (c>0) {
-                        node._mcu = true;
-                    }
-                    if (c<1 && node._mcu) {
-                        delete node._mcu;
-                        c = 3;
-                    } 
-                    if (c>1) {
-                        node.changed = true;
-                        RED.events.emit("nodes:change",node);
-                        changed = true;
-                    }
-                })
-
-                if (changed) {
-                    RED.nodes.dirty(true);
-                    RED.view.updateActive();
-                    RED.view.redraw(true);
                 }
 
-                flows2build = f2b;
-
-            });
-
-            RED.sidebar.addTab({
-                id: "node-red-mcu",
-                label: "MCU",
-                name: "Node-Red MCU",
-                iconClass: "fa fa-microchip",
-                content: content,
-                // toolbar: footerToolbar,
-                enableOnEdit: true,
-                // action: "core:show-flow-debugger-tab"
-            });
-
-
-            let console_container;
-            let config_container;
-
-            tabs = RED.tabs.create({
-                id: "tabs-tabs",
-                vertical: false,
-                scrollable: true,
-                /*
-                addButton: function () {
-                    let tpl = addTemplate();
-                    let tab_id = addTemplateTab(tpl);
-                    tabs.activateTab(tab_id);
-                    self.changed = true;
-                }, 
-                addButtonCaption: "Add new template", */
-                onchange: function (tab) {
-
-                    if (console_container) {
-                        if (tab.id == "__console__") {
-                            console_container.show();
-                        } else {
-                            console_container.hide();
-                        }
-                    }
-
-                    if (config_container) {
-                        if (tab.id != "__console__") {
-                            config_container.show();
-                        } else {
-                            config_container.hide();
-                        }
-                    }
-
-                    // this here is for the editableList
-                    resize_sidebar()
-                }
-            });
-
-            // patch for bottom placed tabs
-            tabsContainer.find(".red-ui-tabs").addClass("red-ui-tabs-bottom")
-            tabsContainer.find(".red-ui-tab-button").addClass("red-ui-tabs-bottom")
-
-            let tab = {
-                id: "1",
-                label: "Configuration",
-                iconClass: "fa fa-cog",
+                // this here is for the editableList
+                resize_sidebar()
             }
-            tabs.addTab(tab);
+        });
 
-            let tab2 = {
-                id: "__console__",
-                label: "Console Monitor",
-                iconClass: "fa fa-window-maximize",
-            }
-            tabs.addTab(tab2);
-            tabs.resize();
+        // patch for bottom placed tabs
+        tabsContainer.find(".red-ui-tabs").addClass("red-ui-tabs-bottom")
+        tabsContainer.find(".red-ui-tab-button").addClass("red-ui-tabs-bottom")
 
-            // tabsTop.addTab(tab);
-            // tabsTop.addTab(tab2);
-            // tabsTop.resize();
+        let tab = {
+            id: "1",
+            label: "Configuration",
+            iconClass: "fa fa-cog",
+        }
+        tabs.addTab(tab);
 
-            bPHh = buildPanelHeader.height();
+        let tab2 = {
+            id: "__console__",
+            label: "Console Monitor",
+            iconClass: "fa fa-window-maximize",
+        }
+        tabs.addTab(tab2);
+        tabs.resize();
 
-            console_container = $('<div>').css({"height": "100%", "display": "none"}).appendTo(buildPanel);
-            console_view = $('<textarea id="mcu_console" wrap="hard" readonly>')
+        // tabsTop.addTab(tab);
+        // tabsTop.addTab(tab2);
+        // tabsTop.resize();
+
+        bPHh = buildPanelHeader.height();
+
+        console_container = $('<div>').css({ "height": "100%", "display": "none" }).appendTo(buildPanel);
+        console_view = $('<textarea id="mcu_console" wrap="hard" readonly>')
             .css({
                 "position": "absolute",
                 "top": "51px",
                 "box-sizing": "border-box",
                 "margin": "4px",
-                "font-family": "monospace", 
-                "font-size": "9pt", 
-                "color": "white", 
-                "background-color": "black", 
-                "white-space": "pre", 
+                "font-family": "monospace",
+                "font-size": "9pt",
+                "color": "white",
+                "background-color": "black",
+                "white-space": "pre",
                 "overflow": "scroll",
                 "width": "calc(100% - 8px)",
                 "resize": "none",
@@ -651,7 +676,7 @@
             })
             .appendTo(console_container);
 
-            config_container = $('<div>')
+        config_container = $('<div>')
             .css({
                 "position": "absolute",
                 "height": "100%",
@@ -663,100 +688,100 @@
             })
             .appendTo(buildPanel);
 
-            config_view = $('<ol id="__config_view__">').appendTo(config_container)
-            config_view.editableList({
-                addButton: "Add config...",
-                height: 200,
-                sortable: true,
-                removable: true,
-                addItem: function(container, index, data) {
+        config_view = $('<ol id="__config_view__">').appendTo(config_container)
+        config_view.editableList({
+            addButton: "Add config...",
+            height: 200,
+            sortable: true,
+            removable: true,
+            addItem: function (container, index, data) {
 
-                    if (isEmpty(data)) {
-                        data = addConfig();
+                if (isEmpty(data)) {
+                    data = addConfig();
+                    persist_config();
+                } else {
+                    if (fill_config_if_missing(data)) {
                         persist_config();
-                    } else {
-                        if (fill_config_if_missing(data)) {
-                            persist_config();
-                        }
+                    }
+                }
+
+                let initializing = true;
+
+                container.css({
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    display: "flex",
+                    "align-items": "center",
+                });
+
+                let inputRows = $('<div></div>').appendTo(container);
+
+                let row1 = $('<div></div>').appendTo(inputRows);
+                // $('<div>', {style:"display: inline-block; padding: 0px 6px; width: 70px;"}).text("Platform:").appendTo(row1);
+
+                // for later...
+                let platform;
+
+                let target = $('<input>').appendTo(row1)
+                target.typedInput({
+                    type: "target",
+                    types: [{
+                        value: "target",
+                        icon: "fa fa-bullseye",
+                        options: [
+                            { value: "sim", label: "Simulator" },
+                            { value: "esp", label: "ESP8266 | Espressif" },
+                            { value: "esp32", label: "ESP32 | Espressif" },
+                            { value: "pico", label: "Pico | Raspberry Pi" },
+                            { value: "gecko", label: "Gecko | Silicon Labs" },
+                            { value: "qca4020", label: "QCA4020 | Qualcomm" },
+                        ],
+                    }],
+                }).on('change', function (event, type, value) {
+
+                    if (platform) {
+                        platform.typedInput("types", [{
+                            icon: "fa fa-at",
+                            value: "platform",
+                            options: mcu_plugin_config.platforms.filter(p => {
+                                return (p.value.slice(0, value.length + 1) == value + "/")
+                            }),
+                        }]);
                     }
 
-                    let initializing = true;
+                    if (value == "sim") {
+                        row2.hide();
 
-                    container.css({
-                        overflow: 'hidden',
-                        whiteSpace: 'nowrap',
-                        display: "flex",
-                        "align-items":"center",
-                    });
-
-                    let inputRows = $('<div></div>').appendTo(container);
-
-                    let row1 = $('<div></div>').appendTo(inputRows);
-                    // $('<div>', {style:"display: inline-block; padding: 0px 6px; width: 70px;"}).text("Platform:").appendTo(row1);
-
-                    // for later...
-                    let platform;
-
-                    let target = $('<input>').appendTo(row1)
-                    target.typedInput({
-                        type:"target", 
-                        types:[{
-                            value: "target",
-                            icon: "fa fa-bullseye",
-                            options: [
-                                    { value: "sim", label: "Simulator"},
-                                    { value: "esp", label: "ESP8266 | Espressif"},
-                                    { value: "esp32", label: "ESP32 | Espressif"},
-                                    { value: "pico", label: "Pico | Raspberry Pi"},
-                                    { value: "gecko", label: "Gecko | Silicon Labs"},
-                                    { value: "qca4020", label: "QCA4020 | Qualcomm"},
-                                ],
-                        }],
-                    }).on('change', function(event, type, value) {
-
-                        if (platform) {
-                            platform.typedInput( "types", [{
-                                icon: "fa fa-at",
-                                value: "platform",
-                                options: mcu_plugin_config.platforms.filter(p => {
-                                    return (p.value.slice(0,value.length+1) == value + "/")
-                                }),
-                            }]);
-                        }
-
-                        if (value == "sim") {
-                            row2.hide();
-                            
-                            if (instrumentation) {
-                                let _instr = instrumentation.typedInput("value");
-                                if (_instr.indexOf('d') < 0) {
-                                    instrumentation.typedInput("value", _instr === "i" ? "d,i" : "d")
-                                    data.debug = true;
-                                    persist_config();
-                                }
+                        if (instrumentation) {
+                            let _instr = instrumentation.typedInput("value");
+                            if (_instr.indexOf('d') < 0) {
+                                instrumentation.typedInput("value", _instr === "i" ? "d,i" : "d")
+                                data.debug = true;
+                                persist_config();
                             }
-
-                        } else {
-                            row2.show();
                         }
 
-                    });
+                    } else {
+                        row2.show();
+                    }
 
-                    $('<div>', {style:"width: 100%; height: 4px;"}).appendTo(row1);
+                });
 
-                    platform = $('<input class="platform">').appendTo(row1);
-                    platform.typedInput({
-                        type: 'platform',
-                        types: [
+                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row1);
+
+                platform = $('<input class="platform">').appendTo(row1);
+                platform.typedInput({
+                    type: 'platform',
+                    types: [
                         {
                             icon: "fa fa-at",
                             value: "platform",
                             options: mcu_plugin_config.platforms.filter(p => {
-                                return (p.value.slice(0,4) == "sim/")
+                                return (p.value.slice(0, 4) == "sim/")
                             }),
                         }]
-                    })
-                    .on('change', function(event, type, value) {
+                })
+                    .on('change', function (event, type, value) {
 
                         if (initializing === false) {
                             data.platform = value;
@@ -764,407 +789,406 @@
                         }
                     })
 
-                    platform.next().css({"min-width": "214px", "width": "auto"});
+                platform.next().css({ "min-width": "214px", "width": "auto" });
 
 
-                    // platform.typedInput("width", "350 px");
-                    // platform.next().css({"min-width": "214px", "width": "auto", "display": "flex", "margin-top": "4px"});
+                // platform.typedInput("width", "350 px");
+                // platform.next().css({"min-width": "214px", "width": "auto", "display": "flex", "margin-top": "4px"});
 
-                    let row2 = $('<div>').css({"margin-top": "4px"}).appendTo(inputRows).hide();
-                    
-                    let plug = $('<input>').appendTo(row2);
-                    plug.typedInput({
-                        type: 'plug',
-                        types: [{
-                            icon: "fa fa-plug",
-                            value: "plug",
-                            hasValue: "true",
+                let row2 = $('<div>').css({ "margin-top": "4px" }).appendTo(inputRows).hide();
 
-                            autoComplete: function(value, done) {
-                                ret = [];
-                                for (i=0; i<mcu_plugin_config.ports.length; i+=1) {
-                                    ret.push({
-                                        value: mcu_plugin_config.ports[i],
-                                        label: mcu_plugin_config.ports[i],
-                                        "i": i
-                                    })
-                                }
-                                done(ret);
-                            },
-                            validate: function(value) {
-                                for (i=0; i<mcu_plugin_config.ports.length; i+=1) {
-                                    if (value == mcu_plugin_config.ports[i]) {
-                                        return true;
-                                    }
-                                }
-                                return false;
+                let plug = $('<input>').appendTo(row2);
+                plug.typedInput({
+                    type: 'plug',
+                    types: [{
+                        icon: "fa fa-plug",
+                        value: "plug",
+                        hasValue: "true",
+
+                        autoComplete: function (value, done) {
+                            ret = [];
+                            for (i = 0; i < mcu_plugin_config.ports.length; i += 1) {
+                                ret.push({
+                                    value: mcu_plugin_config.ports[i],
+                                    label: mcu_plugin_config.ports[i],
+                                    "i": i
+                                })
                             }
-                        }],
-                    }).on('change', function(event, type, value) {
-
-                        if (initializing === false) {
-                            data.port = value;
-                            persist_config();
+                            done(ret);
+                        },
+                        validate: function (value) {
+                            for (i = 0; i < mcu_plugin_config.ports.length; i += 1) {
+                                if (value == mcu_plugin_config.ports[i]) {
+                                    return true;
+                                }
+                            }
+                            return false;
                         }
-                    });
+                    }],
+                }).on('change', function (event, type, value) {
 
-                    // rather than trying to make the input field autogrow, we set a fixed - most probably large enough - min-width here.
-                    plug.next().css({"min-width": "270px", "width": "auto"});
+                    if (initializing === false) {
+                        data.port = value;
+                        persist_config();
+                    }
+                });
 
-                    RED.events.on("mcu:validate-ports", function() {
-                        plug.typedInput("validate");
-                    });
+                // rather than trying to make the input field autogrow, we set a fixed - most probably large enough - min-width here.
+                plug.next().css({ "min-width": "270px", "width": "auto" });
 
-                    let row3 = $('<div>').css({"margin-top": "4px"}).appendTo(inputRows);
+                RED.events.on("mcu:validate-ports", function () {
+                    plug.typedInput("validate");
+                });
 
-                    let b = $('<input type="checkbox"/>').css({"margin-left": "20px"}).appendTo(row3)
-                    b.toggleButton({
-                        enabledIcon: "fa-gear fa-spin fa-fw",
-                        disabledIcon: "fa-cog",
-                        // baseClass: "red-ui-sidebar-header-button"
-                        enabledLabel: "Build",
-                        disabledLabel: "Build"
-                    }).on("change", function() {
-                        if ($(b).prop("checked") === true) {
-                            $(b).prop("checked", false);
+                let row3 = $('<div>').css({ "margin-top": "4px" }).appendTo(inputRows);
 
-                            if (console_view) {
-                                console_view.val("");
+                let b = $('<input type="checkbox"/>').css({ "margin-left": "20px" }).appendTo(row3)
+                b.toggleButton({
+                    enabledIcon: "fa-gear fa-spin fa-fw",
+                    disabledIcon: "fa-cog",
+                    // baseClass: "red-ui-sidebar-header-button"
+                    enabledLabel: "Build",
+                    disabledLabel: "Build"
+                }).on("change", function () {
+                    if ($(b).prop("checked") === true) {
+                        $(b).prop("checked", false);
+
+                        if (console_view) {
+                            console_view.val("");
+                        }
+
+                        // compile the build parameters
+                        let options = {};
+
+                        for (key in data) {
+                            if (key === "more") continue
+                            else if (key === "debug" || key === "release" || key === "platform") {
+                                options[key] = data[key];
                             }
-
-                            // compile the build parameters
-                            let options = {};
-
-                            for (key in data) {
-                                if (key === "more") continue
-                                else if (key === "debug" || key === "release" || key === "platform") {
+                            else if (key in build_config_default) {
+                                // only forward non-default values
+                                if (data[key] !== build_config_default[key]) {
                                     options[key] = data[key];
                                 }
-                               else if (key in build_config_default) {
-                                    // only forward non-default values
-                                    if (data[key] !== build_config_default[key]) {
-                                        options[key] = data[key];
-                                    }
-                                } else {
-                                    options[key] = data[key]
-                                }
+                            } else {
+                                options[key] = data[key]
                             }
-
-                            $.ajax({
-                                url: "mcu/build",
-                                contentType: "application/json",
-                                type:"POST",
-                                data: JSON.stringify({
-                                    "options": options
-                                }),
-                                success: function(resp) {
-                                    // buildButton.toggleClass("disabled",!debuggerEnabled);
-                                    // console.log("success");
-                                    $(b).trigger("change");
-                                },
-                                error: function(jqXHR,textStatus,errorThrown) {
-                                    // console.log(jqXHR,textStatus,errorThrown);
-                                    $(b).trigger("change");
-                                    flashTab("__console__");
-                                }
-                            });        
-                                    
                         }
-                    });
 
-                    let more = $('<a href="#">')
-                        .text("Show more options...")
-                        .css({"margin-left": "20px", "font-size":"small", "text-decoration": "underline"})
-                        .appendTo(row3);
-                    more.on("click", function() {
-                        data.more = !(data.more ?? false);
-                        set_more_options_style();
-                        persist_config();
-                    })
-                    function set_more_options_style() {
-                        if (row4) {
-                            data.more === true ? row4.show(500) : row4.hide(500);
-                        }
-                        if (more) {
-                            more.text((data.more === true ? "Hide" : "Show") + " more options...")
-                        }
-                    }
-
-                    let row4 = $('<div>').css({"margin-top": "4px"}).appendTo(inputRows).hide();
-
-                    $('<div class="mcu-build-option-label">').text("Screen Pixel Format:").appendTo(row4);
-                    let pixel = $('<input>').appendTo(row4)
-                    pixel.typedInput({
-                        type:"pixel", 
-                        types:[{
-                            value: "pixel",
-                            options: [
-                                    { value: "gray16"},
-                                    { value: "gray256"},
-                                    { value: "rgb332"},
-                                    { value: "rgb565be"},
-                                    { value: "rgb565le"},
-                                    // { value: "qca4020", label: "QCA4020 | Qualcomm"},
-                                ],
-                        }],
-                    }).on('change', function(event, type, value) {
-                        if (initializing === false) {
-                            data.pixel = value;
-                            persist_config();
-                        }
-                    })
-                    pixel.next().css({"width": "auto"});
-
-                    $('<div>', {style:"width: 100%; height: 4px;"}).appendTo(row4);
-
-                    $('<div class="mcu-build-option-label">').text("Build Target:").appendTo(row4);
-                    let buildtarget = $('<input>').appendTo(row4)
-                    buildtarget.typedInput({
-                        type:"buildtarget", 
-                        types:[{
-                            value: "buildtarget",
-                            options: [
-                                    { value: "build"},
-                                    { value: "deploy"},
-                                    { value: "xsbug"},
-                                    { value: "clean"},
-                                    { value: "all"},
-                                ],
-                        }],
-                    }).on('change', function(event, type, value) {
-                        if (initializing === false) {
-                            data.buildtarget = value;
-                            persist_config();
-                        }
-                    })
-                    buildtarget.next().css({"width": "auto"});
-
-                    $('<div>', {style:"width: 100%; height: 4px;"}).appendTo(row4);
-
-                    $('<div class="mcu-build-option-label">').text("Screen Rotation:").appendTo(row4);
-                    let rotation = $('<input>').appendTo(row4)
-                    rotation.typedInput({
-                        type:"rotation", 
-                        types:[{
-                            value: "rotation",
-                            options: [
-                                    { value: "0", label: "0°"},
-                                    { value: "90", label: "90°"},
-                                    { value: "180", label: "180°"},
-                                    { value: "270", label: "270°"},
-                                    // { value: "rgb565le"},
-                                    // { value: "qca4020", label: "QCA4020 | Qualcomm"},
-                                ],
-                        }],
-                    }).on('change', function(event, type, value) {
-                        if (initializing === false) {
-                            data.rotation = value;
-                            persist_config();
-                        }
-                    })
-                    rotation.next().css({"width": "auto"});
-
-                    $('<div>', {style:"width: 100%; height: 4px;"}).appendTo(row4);
-
-                    $('<div class="mcu-build-option-label">').text("Instrumentation:").appendTo(row4);
-                    let instrumentation = $('<input>').appendTo(row4)
-                    instrumentation.typedInput({
-                        type:"instrumentation", 
-                        types:[{
-                            value: "instrumentation",
-                            multiple: true,
-                            options: [
-                                    { value: "d", label: "Debug"},
-                                    { value: "i", label: "Release"},
-                                    // { value: "rgb565le"},
-                                    // { value: "qca4020", label: "QCA4020 | Qualcomm"},
-                                ],
-                        }],
-                    }).on('change', function(event, type, value) {
-                        if (initializing === false) {
-
-                            let changed = false;
-
-                            if ((value.indexOf("d") > -1) !== data.debug) {
-                                data.debug = (value.indexOf("d") > -1)
-                                changed = true;
+                        $.ajax({
+                            url: "mcu/build",
+                            contentType: "application/json",
+                            type: "POST",
+                            data: JSON.stringify({
+                                "options": options
+                            }),
+                            success: function (resp) {
+                                // buildButton.toggleClass("disabled",!debuggerEnabled);
+                                // console.log("success");
+                                $(b).trigger("change");
+                            },
+                            error: function (jqXHR, textStatus, errorThrown) {
+                                // console.log(jqXHR,textStatus,errorThrown);
+                                $(b).trigger("change");
+                                flashTab("__console__");
                             }
-                            if ((value.indexOf("i") > -1) !== data.release) {
-                                data.release = (value.indexOf("i") > -1)
-                                changed = true;
-                            }
+                        });
 
-                            if (changed === true) {
-                                persist_config()
-                            }
-
-                        }
-                    })
-                    instrumentation.next().css({"width": "auto"});
-                    $("<span/>").text("Select none of this for a release build!").css({"margin-left": "20px", "font-size":"x-small"}).appendTo(row4);
-
-                    $('<div>', {style:"width: 100%; height: 4px;"}).appendTo(row4);
-
-                    $('<div class="mcu-build-option-label">').text("Arguments:").appendTo(row4);
-                    let arguments = $('<input>').appendTo(row4)
-                    arguments.typedInput({
-                        type: "json", 
-                    }).on('change', function(event, type, value) {
-                        if (initializing === false) {
-                            data.arguments = value;
-                            persist_config();
-                        }
-                    })
-                    arguments.next().css({"width": "auto"});
-
-                    // Now initialize the form
-                    let _target = data.platform.slice(0, data.platform.indexOf("/"));
-                    target.typedInput("value", data.platform == "" ? "sim" : _target);
-                    platform.typedInput("value", data.platform);
-                    plug.typedInput("value", data.port);
-                    plug.typedInput("validate");
-                    set_more_options_style()    // data.more
-                    pixel.typedInput("value", data.pixel);
-                    buildtarget.typedInput("value", data.buildtarget);                    
-                    rotation.typedInput("value", data.rotation);
-                    {
-                        let _instr = [];
-                        if (data.debug === true) {
-                            _instr.push("d")
-                        }
-                        if (data.release === true) {
-                            _instr.push("i")
-                        }
-                        instrumentation.typedInput("value", _instr.join(','));
                     }
-                    arguments.typedInput("value", data.arguments);
-
-                    initializing = false;
-                },
-                removeItem: function(data) {
-                    for (let i=0; i<build_config.length; i+=1) {
-                        if (data.id === build_config[i].id) {
-                            build_config.splice(i,1);
-                            delete data;
-                            persist_config();
-                            break;
-                        }
-                    }
-                },
-                sortItems: function(items) {
-                    let bc = [];
-                    for (let i=0; i<items.length; i+=1) {
-                        bc.push(items[i].data);
-                    }
-                    build_config = bc;
-                    persist_config();
-                },
-                resizeItem(row, item) {
-                    // debugger;
-                    // $(row).find(".platform").typedInput("width", 400);
-                },
-                resize() {
-                    // debugger;
-                }
-            })
-
-
-            {
-                let ratio = 0.35
-                panels.ratio(ratio);
-
-                // on initial launch, panels.js calls panels.resize w/ a height for the second panel of "0"
-                // per source, flex should care for the correct height - which seems to have issues.
-                // thus we re-do this calculation here once:
-                
-                let h = $(content).parent().height();
-                let topPanelSize = ratio*(h-8);
-                let bottomPanelSize = h - topPanelSize - 8;
-                $(buildPanel).outerHeight(bottomPanelSize);
-
-                // this here is for the editableList
-                // not nice ... but necessary!
-                setTimeout(resize_sidebar, 500);
-
-            }
-
-            $.get({
-                url: "mcu/config",
-                contentType: "application/json",
-                success: function(resp) {
-                    // buildButton.toggleClass("disabled",!debuggerEnabled);
-                    // console.log("success");
-                    
-                    let response;   // {config: [{...}]}
-                    try {
-                        response = JSON.parse(resp);
-                    } catch (err) {
-                        // console.log(err)
-                    }
-
-                    if (response && response.config) {
-                        build_config = response.config;
-                        for (let i=0; i<build_config.length; i+=1) {
-                            config_view.editableList('addItem', build_config[i]);
-                        }
-                    }
-                },
-                error: function(jqXHR,textStatus,errorThrown) {
-                    // console.log(jqXHR,textStatus,errorThrown);
-                    // $(b).trigger("change");
-                    flashTab("__console__");
-                }
-            });        
-
-            function persist_config() {
-
-                // https://www.educative.io/answers/how-to-use-the-debounce-function-in-javascript
-                function debounce(func, wait, immediate) {
-                    let timeout;
-
-                    return function executedFunction() {
-                        let context = this;
-                        let args = arguments;
-                            
-                        let later = function() {
-                            timeout = null;
-                            if (!immediate) func.apply(context, args);
-                        };
-
-                        let callNow = immediate && !timeout;
-                        
-                        clearTimeout(timeout);
-
-                        timeout = setTimeout(later, wait);
-                        
-                        if (callNow) func.apply(context, args);
-                    };
-                };
-
-                function run_persist(data) {
-                    $.post({
-                        url: "mcu/config",
-                        contentType: "application/json",
-                        data: data,
-                        success: function(resp) {
-                            // buildButton.toggleClass("disabled",!debuggerEnabled);
-                            // $(b).trigger("change");
-                        },
-                        error: function(jqXHR,textStatus,errorThrown) {
-                            // $(b).trigger("change");
-                            // flashTab("__console__");
-                        }
-                    });        
-                }
-
-                c = JSON.stringify({
-                    "config": build_config
                 });
-                debounce(function() {
-                    run_persist(c);
-                }, 500)();
+
+                let more = $('<a href="#">')
+                    .text("Show more options...")
+                    .css({ "margin-left": "20px", "font-size": "small", "text-decoration": "underline" })
+                    .appendTo(row3);
+                more.on("click", function () {
+                    data.more = !(data.more ?? false);
+                    set_more_options_style();
+                    persist_config();
+                })
+                function set_more_options_style() {
+                    if (row4) {
+                        data.more === true ? row4.show(500) : row4.hide(500);
+                    }
+                    if (more) {
+                        more.text((data.more === true ? "Hide" : "Show") + " more options...")
+                    }
+                }
+
+                let row4 = $('<div>').css({ "margin-top": "4px" }).appendTo(inputRows).hide();
+
+                $('<div class="mcu-build-option-label">').text("Screen Pixel Format:").appendTo(row4);
+                let pixel = $('<input>').appendTo(row4)
+                pixel.typedInput({
+                    type: "pixel",
+                    types: [{
+                        value: "pixel",
+                        options: [
+                            { value: "gray16" },
+                            { value: "gray256" },
+                            { value: "rgb332" },
+                            { value: "rgb565be" },
+                            { value: "rgb565le" },
+                            // { value: "qca4020", label: "QCA4020 | Qualcomm"},
+                        ],
+                    }],
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+                        data.pixel = value;
+                        persist_config();
+                    }
+                })
+                pixel.next().css({ "width": "auto" });
+
+                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
+
+                $('<div class="mcu-build-option-label">').text("Build Target:").appendTo(row4);
+                let buildtarget = $('<input>').appendTo(row4)
+                buildtarget.typedInput({
+                    type: "buildtarget",
+                    types: [{
+                        value: "buildtarget",
+                        options: [
+                            { value: "build" },
+                            { value: "deploy" },
+                            { value: "xsbug" },
+                            { value: "clean" },
+                            { value: "all" },
+                        ],
+                    }],
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+                        data.buildtarget = value;
+                        persist_config();
+                    }
+                })
+                buildtarget.next().css({ "width": "auto" });
+
+                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
+
+                $('<div class="mcu-build-option-label">').text("Screen Rotation:").appendTo(row4);
+                let rotation = $('<input>').appendTo(row4)
+                rotation.typedInput({
+                    type: "rotation",
+                    types: [{
+                        value: "rotation",
+                        options: [
+                            { value: "0", label: "0°" },
+                            { value: "90", label: "90°" },
+                            { value: "180", label: "180°" },
+                            { value: "270", label: "270°" },
+                            // { value: "rgb565le"},
+                            // { value: "qca4020", label: "QCA4020 | Qualcomm"},
+                        ],
+                    }],
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+                        data.rotation = value;
+                        persist_config();
+                    }
+                })
+                rotation.next().css({ "width": "auto" });
+
+                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
+
+                $('<div class="mcu-build-option-label">').text("Instrumentation:").appendTo(row4);
+                let instrumentation = $('<input>').appendTo(row4)
+                instrumentation.typedInput({
+                    type: "instrumentation",
+                    types: [{
+                        value: "instrumentation",
+                        multiple: true,
+                        options: [
+                            { value: "d", label: "Debug" },
+                            { value: "i", label: "Release" },
+                            // { value: "rgb565le"},
+                            // { value: "qca4020", label: "QCA4020 | Qualcomm"},
+                        ],
+                    }],
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+
+                        let changed = false;
+
+                        if ((value.indexOf("d") > -1) !== data.debug) {
+                            data.debug = (value.indexOf("d") > -1)
+                            changed = true;
+                        }
+                        if ((value.indexOf("i") > -1) !== data.release) {
+                            data.release = (value.indexOf("i") > -1)
+                            changed = true;
+                        }
+
+                        if (changed === true) {
+                            persist_config()
+                        }
+
+                    }
+                })
+                instrumentation.next().css({ "width": "auto" });
+                $("<span/>").text("Select none of this for a release build!").css({ "margin-left": "20px", "font-size": "x-small" }).appendTo(row4);
+
+                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
+
+                $('<div class="mcu-build-option-label">').text("Arguments:").appendTo(row4);
+                let arguments = $('<input>').appendTo(row4)
+                arguments.typedInput({
+                    type: "json",
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+                        data.arguments = value;
+                        persist_config();
+                    }
+                })
+                arguments.next().css({ "width": "auto" });
+
+                // Now initialize the form
+                let _target = data.platform.slice(0, data.platform.indexOf("/"));
+                target.typedInput("value", data.platform == "" ? "sim" : _target);
+                platform.typedInput("value", data.platform);
+                plug.typedInput("value", data.port);
+                plug.typedInput("validate");
+                set_more_options_style()    // data.more
+                pixel.typedInput("value", data.pixel);
+                buildtarget.typedInput("value", data.buildtarget);
+                rotation.typedInput("value", data.rotation);
+                {
+                    let _instr = [];
+                    if (data.debug === true) {
+                        _instr.push("d")
+                    }
+                    if (data.release === true) {
+                        _instr.push("i")
+                    }
+                    instrumentation.typedInput("value", _instr.join(','));
+                }
+                arguments.typedInput("value", data.arguments);
+
+                initializing = false;
+            },
+            removeItem: function (data) {
+                for (let i = 0; i < build_config.length; i += 1) {
+                    if (data.id === build_config[i].id) {
+                        build_config.splice(i, 1);
+                        delete data;
+                        persist_config();
+                        break;
+                    }
+                }
+            },
+            sortItems: function (items) {
+                let bc = [];
+                for (let i = 0; i < items.length; i += 1) {
+                    bc.push(items[i].data);
+                }
+                build_config = bc;
+                persist_config();
+            },
+            resizeItem(row, item) {
+                // debugger;
+                // $(row).find(".platform").typedInput("width", 400);
+            },
+            resize() {
+                // debugger;
             }
+        })
+
+
+        {
+            let ratio = 0.35
+            panels.ratio(ratio);
+
+            // on initial launch, panels.js calls panels.resize w/ a height for the second panel of "0"
+            // per source, flex should care for the correct height - which seems to have issues.
+            // thus we re-do this calculation here once:
+
+            let h = $(content).parent().height();
+            let topPanelSize = ratio * (h - 8);
+            let bottomPanelSize = h - topPanelSize - 8;
+            $(buildPanel).outerHeight(bottomPanelSize);
+
+            // this here is for the editableList
+            // not nice ... but necessary!
+            setTimeout(resize_sidebar, 500);
+
         }
-    })
+
+        $.get({
+            url: "mcu/config",
+            contentType: "application/json",
+            success: function (resp) {
+                // buildButton.toggleClass("disabled",!debuggerEnabled);
+                // console.log("success");
+
+                let response;   // {config: [{...}]}
+                try {
+                    response = JSON.parse(resp);
+                } catch (err) {
+                    // console.log(err)
+                }
+
+                if (response && response.config) {
+                    build_config = response.config;
+                    for (let i = 0; i < build_config.length; i += 1) {
+                        config_view.editableList('addItem', build_config[i]);
+                    }
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                // console.log(jqXHR,textStatus,errorThrown);
+                // $(b).trigger("change");
+                flashTab("__console__");
+            }
+        });
+
+        function persist_config() {
+
+            // https://www.educative.io/answers/how-to-use-the-debounce-function-in-javascript
+            function debounce(func, wait, immediate) {
+                let timeout;
+
+                return function executedFunction() {
+                    let context = this;
+                    let args = arguments;
+
+                    let later = function () {
+                        timeout = null;
+                        if (!immediate) func.apply(context, args);
+                    };
+
+                    let callNow = immediate && !timeout;
+
+                    clearTimeout(timeout);
+
+                    timeout = setTimeout(later, wait);
+
+                    if (callNow) func.apply(context, args);
+                };
+            };
+
+            function run_persist(data) {
+                $.post({
+                    url: "mcu/config",
+                    contentType: "application/json",
+                    data: data,
+                    success: function (resp) {
+                        // buildButton.toggleClass("disabled",!debuggerEnabled);
+                        // $(b).trigger("change");
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        // $(b).trigger("change");
+                        // flashTab("__console__");
+                    }
+                });
+            }
+
+            c = JSON.stringify({
+                "config": build_config
+            });
+            debounce(function () {
+                run_persist(c);
+            }, 500)();
+        }
+    }
 })();
 </script>
