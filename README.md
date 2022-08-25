@@ -120,6 +120,11 @@ cd <path to your .node-red folder>
 npm install https://github.com/ralphwetzel/node-red-mcu-plugin
 ```
 
+## Next Steps / To Do List
+- [ ] Add further Node.js modules
+- [ ] Provide better support for CommonJS modules
+- [ ] Bug fixing! :sweat_smile:
+
 ## Technical Details
 
 ### Build Environment
