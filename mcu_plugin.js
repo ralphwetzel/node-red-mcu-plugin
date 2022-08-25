@@ -1,4 +1,5 @@
-const { exec } = require('node:child_process');
+const clone = require("clone");
+const { exec, spawn } = require('node:child_process');
 const fs = require('fs-extra');
 const os = require("os");
 const path = require("path");
@@ -8,6 +9,10 @@ const app_name = "node-red-mcu-plugin";
 const build_cmd = "mcconfig -d -m -p mac"
 
 const mcuProxy = require("./lib/proxy.js");
+const mcuNodeLibrary = require("./lib/library.js");
+const mcuManifest = require("./lib/manifest.js");
+
+// const {getPersistentShell} = require('./lib/persistent-shell');
 
 let flows2build = [];
 let proxy;
@@ -23,70 +28,18 @@ const mcu_plugin_config = {
     "ports": []
 }
 
-module.exports = function(RED) {
+const library = new mcuNodeLibrary.library();
+global.registerMCUModeType = function(standard_type, mcumode_type) {
+    library.register_mcumode_type(standard_type, mcumode_type)
+}
 
-    // *****
-    // Ensure that MODDABLE is defined
-    
-    const MODDABLE = process.env.MODDABLE;
+let runtime_nodes;
 
-    if (!MODDABLE || !fs.existsSync(MODDABLE)) {
-        RED.log.error("*** node-red-mcu-plugin:");
-        RED.log.error("Environment variable $MODDABLE is not defined or stating a non-existing path.");
-        RED.log.error("Please install the Moddable SDK according to its Getting Started Guide:");
-        RED.log.error("https://github.com/Moddable-OpenSource/moddable/blob/public/documentation/Moddable%20SDK%20-%20Getting%20Started.md");
-        return;
-    }
+// ****
+// Patch support function: Calculate the path to a to-be-required file
 
-    {
-        const platform_modifier = {
-            darwin: "mac",
-            linux: "lin",
-            win32: "win"
-        }
+function get_require_path(req_path) {
 
-        let pm = platform_modifier[process.platform];
-        if (!pm) {
-            RED.log.error("*** node-red-mcu-plugin -> Error!");
-            RED.log.error("* Running on a platform not supported:");
-            RED.log.error(`* process.platform = "${process.platform}"`);
-            RED.log.error("*** node-red-mcu-plugin -> Runtime setup canceled.");
-            return;
-        }
-
-        let moddable_tools_path = path.join(MODDABLE, "build", "bin", pm, "release");
-
-        if (process.env.PATH.indexOf(moddable_tools_path) < 0) {
-            process.env.PATH += (process.platform === "win32" ? ";" : ":") + moddable_tools_path;
-        }
-    }
-    
-    // End "Ensure ..."
-    // *****
-    
-    // *****
-    // Hook node definitions
-
-    function mcu_inject(config) {
-        RED.nodes.createNode(this, config);
-        let node = this;
-        node.on('input', function(msg, send, done) {
-
-            if (proxy) {
-                proxy.send2mcu("inject", this.z, this.id);
-            }
-            return;
-        });
-    }
-    RED.nodes.registerType("mcu*inject",mcu_inject);
-
-
-    // End "Hook ..."
-    // *****
-
-
-    // *****
-    // Calculate path to flowUtil (lib/flows/util.js" & require it
     let rm = require.main.path;
 
     try {
@@ -103,7 +56,7 @@ module.exports = function(RED) {
         } else {
             console.log("Error while handling require.main.path.")
         }
-        return;
+        return null;
     }
 
     // split path into segments ... the safe way
@@ -134,7 +87,8 @@ module.exports = function(RED) {
     }
 
     // compose things again...
-    let p = path.join(rmp.root, ...rms,"node_modules", "@node-red","runtime","lib", "flows", "util.js");
+    req_path = req_path.split("/");
+    let p = path.join(rmp.root, ...rms, ...req_path);
 
     if (!fs.existsSync(p)) {
         console.log(error_header)
@@ -142,10 +96,210 @@ module.exports = function(RED) {
         console.log("Please raise an issue @ our GitHub repository, stating the following information:");
         console.log("> require.main.path:", require.main.path);
         console.log("> utils.js:", p);
+        return null;
+    }
+
+    return p;
+}
+
+// End: "Patch support ..."
+// *****
+
+// *****
+// Apply patch to get access to additional node related information
+// This has to happen immediately when this file is required, before any Node-RED logic kicks in...
+
+const registryUtilPath = get_require_path("node_modules/@node-red/registry/lib/util.js")
+if (!registryUtilPath) return;
+
+const registryUtil = require(registryUtilPath)
+
+const orig_createNodeApi = registryUtil.createNodeApi;
+function patched_createNodeApi(node) {
+
+    if (node.file.indexOf("mcu_plugin.js") >= 0) {
+        // console.log(node.namespace, node.file, node.id)
+        // console.log(node);
+    } else {
+        if (node.types) {
+            library.register_node(node);
+        }
+        // console.log(node.namespace, node.file, node.id)
+    }
+
+    // console.log(node.file);
+    return orig_createNodeApi(node);
+}
+registryUtil.createNodeApi = patched_createNodeApi
+
+
+// *** THIS DOESNT WORK!!
+// We use this patch to get our hand on the full runtime.nodes API
+let orig_copyObjectProperties = registryUtil.copyObjectProperties;
+console.log(orig_copyObjectProperties);
+
+function patched_copyObjectProperties(src,dst,copyList,blockList) {
+
+    if (!runtime_nodes && copyList.indexOf("createNode") >=0 && copyList.indexOf("getNode") >=0) {
+        runtime_nodes = src;
+        console.log(runtime_nodes);
+    }
+
+    return orig_copyObjectProperties(src,dst,copyList,blockList);
+}
+registryUtil.copyObjectProperties = patched_copyObjectProperties;
+
+//
+// *****
+
+
+module.exports = function(RED) {
+
+    console.log(process.env);
+
+    // *****
+    // env variable settings: Ensure ...
+    
+    let IDF_PATH;
+
+    // ... that $MODDABLE is defined.
+    const MODDABLE = process.env.MODDABLE;
+    
+    if (!MODDABLE) {
+        RED.log.error("*** node-red-mcu-plugin -> Error:");
+        RED.log.error("* Environment variable $MODDABLE is not defined.");
+        RED.log.error("* Please install the Moddable SDK according to its Getting Started Guide:");
+        RED.log.error("* https://github.com/Moddable-OpenSource/moddable/blob/public/documentation/Moddable%20SDK%20-%20Getting%20Started.md");
+        RED.log.error('* In addition please be aware that, when running Node-RED as a service (e.g. on Linux),');
+        RED.log.error('* "it will not have access to environment variables that are defined only in the calling process."');
+        RED.log.error('* Please refer to https://nodered.org/docs/user-guide/environment-variables#running-as-a-service for further support.');
+        RED.log.error("*** node-red-mcu-plugin -> Runtime setup canceled.");
         return;
     }
 
-    let flowUtil = require(p)
+    // ... that $MODDABLE declares a valid path.
+    if (!fs.existsSync(MODDABLE)) {
+        RED.log.error("*** node-red-mcu-plugin -> Error!");
+        RED.log.error("* Environment variable $MODDABLE is stating a non-existing path:");
+        RED.log.error(`* process.env.MODDABLE = "${MODDABLE}"`);
+        RED.log.error("*** node-red-mcu-plugin -> Runtime setup canceled.");
+        return;
+    }
+
+    // ... that the Moddable tools directory is included in $PATH.
+    {
+        const platform_modifier = {
+            darwin: "mac",
+            linux: "lin",
+            win32: "win"
+        }
+
+        let pm = platform_modifier[process.platform];
+        if (!pm) {
+            RED.log.error("*** node-red-mcu-plugin -> Error!");
+            RED.log.error("* Running on a platform not supported:");
+            RED.log.error(`* process.platform = "${process.platform}"`);
+            RED.log.error("*** node-red-mcu-plugin -> Runtime setup canceled.");
+            return;
+        }
+
+        let moddable_tools_path = path.join(MODDABLE, "build", "bin", pm, "release");
+
+        if (process.env.PATH.indexOf(moddable_tools_path) < 0) {
+            process.env.PATH += (process.platform === "win32" ? ";" : ":") + moddable_tools_path;
+        }
+    }
+
+
+    // ...that $IDF_PATH is defined
+
+    // const IDF_PATH = process.env.IDF_PATH;
+
+    // if (!IDF_PATH) {
+        
+    //     // Try to find IDF_PATH
+
+    //     // ToDo: This is valid (confirmed) only for ESP32 & Linux.
+    //     // Implement/confirm for the other targets & platforms (mac, win) as well!
+
+    //     let HOME = process.env.HOME;
+    //     if (HOME) {
+    //         let idf_options = [
+    //             `${HOME}/esp32/esp-idf`,
+    //             `${HOME}/.local/share/esp32/esp-idf`
+    //         ]
+    
+    //         for (let i=0; i<idf_options.length; i+=1) {
+    //             if (fs.existsSync(idf_options[i])) {
+    //                 process.env.IDF_PATH = idf_options[i];
+    //             }
+    //         }
+    //     }
+    // }
+
+    // if (!IDF_PATH) {
+    //     RED.log.error("*** node-red-mcu-plugin -> Error!");
+    //     RED.log.error("* Environment variable $IDF_PATH is not defined.");
+    //     RED.log.error("* Please refer to our documentation for further support.");
+    //     RED.log.error("*** node-red-mcu-plugin -> Runtime setup canceled.");
+    //     return;
+    // }
+
+    // // ... that $IDF_PATH declares a valid path.
+    // if (!fs.existsSync(IDF_PATH)) {
+    //     RED.log.error("*** node-red-mcu-plugin -> Error!");
+    //     RED.log.error("* Environment variable $IDF_PATH is stating a non-existing path:");
+    //     RED.log.error(`* process.env.IDF_PATH = "${IDF_PATH}"`);
+    //     RED.log.error("*** node-red-mcu-plugin -> Runtime setup canceled.");
+    //     return;
+    // }
+    
+    // End: "env variable settings ..."
+    // *****
+
+    // *****
+    // Hook node definitions
+
+    function mcu_inject(config) {
+        RED.nodes.createNode(this, config);
+        let node = this;
+        node.on('input', function(msg, send, done) {
+
+            console.log("@input")
+            if (proxy) {
+                proxy.send2mcu("inject", this.z, this.id);
+            }
+            return;
+        });
+    }
+    RED.nodes.registerType("__mcu*inject", mcu_inject);
+    registerMCUModeType("inject", "__mcu*inject")
+
+    function mcu_debug(config) {
+        RED.nodes.createNode(this, config);
+        console.log(config);
+
+        let node = this;
+        node.on('input', function(msg, send, done) {
+
+            console.log("@mcu*debug", msg);
+
+        });
+    }
+    RED.nodes.registerType("__mcu*debug", mcu_debug);
+    registerMCUModeType("debug", "debug")
+
+    // End "Hook ..."
+    // *****
+
+
+    // *****
+    // Calculate path to flowUtil (lib/flows/util.js" & require it
+
+    let flowUtilPath = get_require_path("node_modules/@node-red/runtime/lib/flows/util.js")
+    if (!flowUtilPath) return;
+
+    let flowUtil = require(flowUtilPath)
 
     // End "Calculate ..."
     // *****
@@ -162,7 +316,8 @@ module.exports = function(RED) {
 
         // replacement table NR=>MCU
         let replace = {
-            'inject': 'mcu*inject',
+            'inject': '__mcu*inject',
+            'debug': 'debug'
         }
 
         /*
@@ -186,17 +341,21 @@ module.exports = function(RED) {
 
         if (config._mcu && config._mcu===true) {
             console.log("@mcu");
-            if (config.type && replace[config.type]) {
-                config.type = replace[config.type]
-                console.log("replacing " + config.id)
-            } else {
-                // if no replacement node defined: Don't create any node!
-                console.log("voiding " + config.id)
-                return;
+            if (config.type) {
+                let t = library.get_mcumode_type(config.type)
+                console.log(t);
+                if (t) {
+                    config.type = t;
+                    console.log("replacing " + config.id + " w/ " + t)
+                } else {
+                    // if no replacement node defined: Don't create any node!
+                    console.log("voiding " + config.id)
+                    return;
+                }
             }
         }
 
-        return orig_createNode(flow,config);
+        return orig_createNode(flow, config);
     }
 
     let orig_diffConfigs = flowUtil.diffConfigs;
@@ -229,6 +388,7 @@ module.exports = function(RED) {
 
     // End "Apply..."
     // *****
+
 
     // *****
     function patch_xs_file(pre, post) {
@@ -318,7 +478,7 @@ module.exports = function(RED) {
         return fs.readdirSync(parent_dir).filter(function (file) {
             return fs.statSync(path.join(parent_dir,file)).isDirectory();
         });
-    }
+      }
 
     {
         // Those are the available platforms we are aware of:
@@ -512,56 +672,169 @@ module.exports = function(RED) {
     console.log("MCU loaded.")
 
 
-    function make_build_environment() {
+    function make_build_environment(working_directory, options) {
 
-        // file to copy to generate the build environment
-        const env4build = {
-            "./node-red-mcu/main.js": "./main.js", 
-            "./node-red-mcu/manifest.json": "./manifest.json",
-            "./node-red-mcu/nodered.js": "./nodered.js",
-            "./node-red-mcu/nodered.c": "./nodered.c",
-            "./node-red-mcu/nodes": "./nodes"
-        }
+        // Create target directory
+        let dest = working_directory ?? fs.mkdtempSync(path.join(os.tmpdir(), app_name));
+        fs.ensureDirSync(dest);
+
+
+        let mainjs = [
+            // 'import Modules from "modules";',
+            // 'globalThis.Modules = Modules;',
+            // 'globalThis.require = Modules.importNow;',
+            // 'function require(_path) {',
+            // 'trace("@require")',
+            // '}',
+            // 'globalThis.require = require;',
+            'import "nodered";	// import for global side effects',
+            // 'trace("pre", "\\n");',
+        ];
+        let mainjs_end = [
+            'import flows from "flows";',
+            'trace("post", "\\n");',
+            'RED.build(flows);',
+        ]
+
         
-        // make the flows.js file
-        /*
+        // // write manifest_flows.json
+        // // to compensate for the situation that we cannot - currently - opt-out the flows.json in the node-red-mcu directory
+        // mf = {
+        //     "modules": {
+        //         "*": [{ 
+        //                 "source": "./flows",
+        //                 "transform": "nodered2mcu"
+        //             }]
+        //     }
+        // }
+
+        // fs.writeFileSync(path.join(dest, "manifest_flows.json"), JSON.stringify(mf, null, "  "), (err) => {
+        //     if (err) {
+        //         throw err;
+        //     }
+        // });
+
+        // Create and initialize the manifest builder
+        let mcu_nodes_root = path.resolve(__dirname, "./mcu_modules");
+        // console.log(mcu_nodes_root);
+        let manifest = new mcuManifest.builder(library, mcu_nodes_root);
+        manifest.initialize();
+
+        manifest.resolver_paths = [
+            require.main.path,
+            RED.settings.userDir
+        ]
+
+        // Try to make this the first entry - before the includes!
+
+        // Add our flows.json
+        // manifest.add_module({"source": "./flows", "transform": "nodered2mcu"})
+        // manifest.include_manifest("./manifest_flows.json");
+
+        // Add root manifest from node-red-mcu
+        // ToDo: node-red-mcu shall be a npm package as well - soon!
+        const root_manifest_path = "./node-red-mcu"
+        let rmp = path.resolve(__dirname, root_manifest_path);
+        manifest.add_build("MCUROOT", rmp);
+        manifest.include_manifest("$(MCUROOT)/manifest_runtime.json")
+
+        // manifest.add_module("$(MCUROOT)/main")
+
+        // manifest.include_manifest("./manifest_flows.json");
+
+        // Make the flows.json file & and add manifests of the nodes
         let nodes = [];
+
         RED.nodes.eachNode(function(n) {
             if (n._mcu) {
+
+                // add node to flows.json
                 nodes.push(n);
+
+                // verify that a manifest is available, create stubs for missing ones
+                let node = library.get_node(n.type);
+                if (!node) return;
+
+                let module = node.module;
+                if (!module) return;
+
+                if (module === "node-red") {
+                    console.log(`Type "${n.type}" = core node: No manifest added.`);
+                    return;
+                }
+    
+                if (manifest.resolver_paths.indexOf(node.path) < 0) {
+                    manifest.resolver_paths.push(node.path)
+                }
+
+                let p = manifest.get_manifest_of_module(module, dest);
+                if (p && typeof(p) === "string") {
+                    manifest.include_manifest(p);
+                    return;
+                }
+                p = manifest.create_manifests_for_module(module, dest)
+                if (p && typeof(p) === "string") {
+                    manifest.include_manifest(p);
+                    mainjs.push(`import "${module}"`);
+                }
             }
         });
-        let flowsjs = "const flows=" + JSON.stringify(nodes, null, 2) + ";\r\n";
-        flowsjs+= "export default Object.freeze(flows, true);"
-        */
 
-        // make the flows.json file
-        let nodes = [];
-        RED.nodes.eachNode(function(n) {
-            if (n._mcu) {
-                nodes.push(n);
-            }
-        });
-
-        // in case this is going to be changed again ;)
+        // In case this is going to be changed again ;)
         let flows_file_data = JSON.stringify(nodes, null, 2)
         let flows_file_name = "flows.json"
 
-        let error;
-        let dest = fs.mkdtempSync(path.join(os.tmpdir(), app_name));
-    
-        fs.ensureDirSync(dest);
-        for (let file in env4build) {
-            let source = path.join(__dirname, file);
-            let target = path.join(dest, env4build[file]);
-            let stat = fs.statSync(source);
-            if (stat.isDirectory()) {
-                fs.emptyDirSync(target);
-            }
-            fs.copySync(source,target);
-        }
-    
+        // Write the flows file (currently flows.json)
         fs.writeFileSync(path.join(dest, flows_file_name), flows_file_data, (err) => {
+            if (err) {
+                throw err;
+            }
+        });
+
+        // add our flows.json
+        manifest.add_module({"source": "./flows", "transform": "nodered2mcu"})
+        // manifest.add_preload("flows");
+
+        // remove the standard (definition of) flows,json
+        // let obsolete_flows_path = path.join(path.dirname(rmp), "flows.json");
+        // obsolete_flows_path = obsolete_flows_path.slice(0, -path.extname(obsolete_flows_path).length)
+        // "~" => exclude from build!
+        // manifest.add_module(obsolete_flows_path, "~")
+        // manifest.add_module({
+        //     source: "$(MCUROOT)/flows",
+        //     transform: "nodered2mcu"
+        // }, "~");
+
+        // Write the main.js file
+        mainjs.push(...mainjs_end);
+        fs.writeFileSync(path.join(dest, "main.js"), mainjs.join("\r\n"), (err) => {
+            if (err) {
+                throw err;
+            }
+        });
+
+        manifest.add_module("./main")
+
+        if (options?.creation) {
+            let c = JSON.parse(options.creation)
+            manifest.add(c, "creation");
+        }
+
+        // let test = {
+        //     "static": 65536,
+        //     "stack": 384,
+        //     "keys": {
+        //         "available": 64,
+        //         "name": 53,
+        //         "symbol": 3,
+        //     },
+        // }
+
+        let m = manifest.get();
+        // console.log(m);
+
+        // Write the (root) manifest.json
+        fs.writeFileSync(path.join(dest, "manifest.json"), manifest.get(), (err) => {
             if (err) {
                 throw err;
             }
@@ -571,9 +844,262 @@ module.exports = function(RED) {
     
     }
 
+    async function build_flows(options, publish) {
+
+        options = options ?? {};
+
+        function _publish() {}
+        publish = publish ?? _publish;
+
+        function publish_stdout(msg) {
+            publish("mcu/stdout/test", msg, false); 
+        }
+
+        function publish_stderr(msg) {
+            publish("mcu/stdout/test", msg, false); 
+        }
+
+        publish_stdout("Starting Build process...")
+
+        // create flows.json
+        // create manifest.json for nodes in flows.json
+        // create manifests for all dependencies
+        // create an .env for the build command shell
+        // - check that MODDABLE is valid
+        // - check if IDF_PATH exists & is valid
+        // create mcconfig command string
+        // spawn shell
+        // run IDF exports.sh
+        // run mcconfig
+
+        function ensure_env_path(name, path_options) {
+
+            let n = process.env[name];
+            if (n) {
+                publish_stdout(`$${name} is defined: ${n}`)
+
+                // verify that $name declares a valid path.
+                if (!fs.existsSync(n)) {
+                    throw(`$${name} is stating a non-existing path!`)
+                }
+
+                return n;
+            }
+
+            // Try to find path for $name
+            for (let i = 0; i < path_options.length; i += 1) {
+                if (fs.existsSync(path_options[i])) {
+                    n = path_options[i];
+                    break;
+                }
+            }
+            
+            if (!n) {
+                throw(`$${name} is not defined.`)
+            }
+
+            publish_stdout(`$${name} identified: ${n}`);
+            return n;
+        }
+
+        publish_stdout(`Creating build environment for platform ${options.platform}.`)
+
+        // Define local dir as working_directory based on options.id
+        const make_dir = path.join(RED.settings.userDir, "mcu-plugin-cache", `config${options.id}`);
+        
+        // only preliminary for testing!!
+        fs.emptyDirSync(make_dir)
+
+        make_build_environment(make_dir, options);
+
+        publish_stdout(`Working directory: ${make_dir}`);
+
+        let env = {
+            "HOME": process.env.HOME,
+            "SHELL": process.env.SHELL,
+            "PATH": process.env.PATH,
+            "MODDABLE": MODDABLE,
+        }
+
+        let platform = options.platform.split("/");
+        
+        const HOME = process.env.HOME ?? "";
+        if (HOME.length < 1) {
+            throw(`$HOME is not defined.`)
+        }
+
+        const pid = platform[0] ?? ""
+
+        switch (pid) {
+            case "esp":
+                env.ESP_BASE = ensure_env_path("ESP_BASE", [
+                    `${HOME}/esp`,
+                    `${HOME}/.local/share/esp`
+                ]);
+                break;
+            case "esp32":
+                env.IDF_PATH = ensure_env_path("IDF_PATH", [
+                    `${HOME}/esp32/esp-idf`,
+                    `${HOME}/.local/share/esp32/esp-idf`
+                ]);
+                break;
+            case "pico":
+            case "gecko":
+            case "qca4020":
+                    publish_stderr(`System setup support currently not implemented for platform ${options.platform}.`);
+            case "sim":
+                break;
+            default:
+                throw(`Invalid platform identifier given: ${pid}`);
+        }
+
+        let cmd = "mcconfig"
+
+        if (options.debug === true) {
+            cmd += " -d";
+            cmd += " -x localhost:5004"
+        }
+
+        if (options.pixel) {
+            cmd += " -f " + options.pixel;
+        }
+
+        if (options.release === true) {
+            cmd += " -i"
+        }
+
+        if (options.make === true) {
+            cmd += " -m";
+        }
+
+        if (options.platform) {
+            cmd += " -p " + options.platform;
+        }
+
+        if (options.rotation) {
+            cmd += " -r " + options.rotation;
+        }
+
+        if (options.buildtarget) {
+            cmd += " -t " + options.buildtarget;
+        }
+
+        if (options.arguments) {
+
+            let args = JSON.parse(options.arguments)
+            for (key in args) {
+                cmd += " " + key + '="' + args[key] + '"'
+            }
+        }
+
+        let shell_options = {
+            "cwd": make_dir,
+            "env": env
+        };
+
+        publish_stdout("> cd " + make_dir);
+
+        const build_commands = {
+            "sim": [
+                cmd
+            ],
+            "esp": [
+                cmd
+            ],
+            "esp32": [
+                "source $IDF_PATH/export.sh",
+                cmd
+            ],
+            "pico": [
+                cmd
+            ],
+            "gecko": [
+                cmd
+            ],
+            "qca4020": [
+                cmd
+            ]
+        }
+
+        bcmds = build_commands[pid];
+
+        const run_cmd = cmd => new Promise((resolve, reject) => {
+
+            publish_stdout(`> ${cmd}`);
+
+            let builder = exec(cmd, {
+                "cwd": make_dir,
+                "env": env
+            }, (err, stdout, stderr) => {
+                if (err) {
+                    reject(err)
+                }
+                resolve();
+            });
+
+            builder.stdout.on('data', function(data) {
+                publish_stdout(data); 
+            });
+            builder.stderr.on('data', function(data) {
+                publish_stdout(data); 
+            });
+
+        });
+
+        // https://stackoverflow.com/questions/40328932/javascript-es6-promise-for-loop
+        return new Promise((resolve, reject) => {
+            bcmds.reduce( (p, _, i) => 
+                p.then(() => run_cmd(bcmds[i])),
+                Promise.resolve() )
+            .then(() => resolve())
+            .catch((err) => reject(err));
+        });
+
+        // shell_options.shell = true;
+
+        // const shell = getPersistentShell(process.env.SHELL, shell_options);
+
+        // shell.process.stdout.on('data', function(data) {
+        //     publish_stdout(data); 
+        // });
+        // shell.process.stderr.on('data', function(data) {
+        //     publish_stderr(data); 
+        // });
+
+        // bcp = build_commands[pid];
+
+        // for (let i=0; i<bcp.length; i++) {
+        //     shell.execCmd(bcp[i]);
+        // }
+        // console.log("prebcmd")
+        // // shell.process.stdin.emit('end');
+        // shell.process.stdin.end();
+        // console.log("post")
+        // try {
+        //     // let result = await shell.finalResult;
+        //     let result = shell.finalResult;
+        //     result.then((data) => {
+        //         console.log("@then")
+        //         console.log(data)
+        //     })
+        //     .catch((err) => {
+        //         console.log("@catch")
+        //         console.log(err)
+        //     })
+        // }
+        // catch (err) {
+        //     console.log("@tryatch")
+        //     console.log(err);
+        // }
+
+        // console.log("end")
+
+    } 
+
+
     function build_and_run(publish, options) {
 
-        options = options || {};
+        options = options ?? {};
         let cmd = "mcconfig"
 
         if (options.debug === true) {
@@ -674,6 +1200,8 @@ module.exports = function(RED) {
 
             } catch (err) {
                 console.log("@catch (err)")
+                console.log(err);
+
                 msg.error = {};
                 for (e in err) {
                     msg.error[e] = err[e];
@@ -820,23 +1348,55 @@ module.exports = function(RED) {
                     // console.log("Status:", status);
                 })
 
+                proxy.on("input", (data) => {
+                    if (data.source && data.source.id) {
+
+                        let id = data.source.id;
+                        let node = RED.nodes.getNode(id);
+                        if (node) {
+                            delete data.source;
+                            node.receive(data);
+                        }
+                    }
+                })
+
                 // build_and_run()
                 // .then(msg => { console.log(msg) })
                 // .catch(msg => {console.log("error @ build_and_run", msg)});
 
-                return build_and_run(RED.comms.publish, build_options)
-                .then((msg) => {
-                    // console.log("after build", msg)
-                    if (msg.error) {
-                        res.status(500).end();
-                    } else {
+                // return build_and_run(RED.comms.publish, build_options)
+                // .then((msg) => {
+                //     // console.log("after build", msg)
+                //     if (msg.error) {
+                //         res.status(500).end();
+                //     } else {
+                //         res.status(200).end();
+                //     }
+                // })
+                // .catch((err) => {
+                //     // RED.comms.publish("mcu/stdout/test", "__flash_console", true)
+                //     res.status(400).end();
+                // })
+
+                try {
+                    build_flows(build_options, RED.comms.publish)
+                    .then( () => {
                         res.status(200).end();
-                    }
-                })
-                .catch((err) => {
-                    // RED.comms.publish("mcu/stdout/test", "__flash_console", true)
+                    })
+                    .catch((err) => {
+                        console.log(err);
+                        RED.comms.publish("mcu/stdout/test", err, false);
+                        res.status(400).end();
+                    })
+                }
+                catch (err) {
+                    console.log(err);
+                    RED.comms.publish("mcu/stdout/test", err, false);
                     res.status(400).end();
-                })
+                }
+
+
+
 
                 /*
                     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), app_name));

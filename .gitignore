@@ -109,3 +109,6 @@ node-red-mcu/
 
 mcu-orig.js
 mcu-orig.html
+
+archive/
+.DS_Store

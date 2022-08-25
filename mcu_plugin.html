@@ -217,7 +217,8 @@
         rotation: "0",
         debug: true,
         release: false,
-        arguments: "{}"
+        arguments: "{}",
+        creation: "{}",
     }
 
     function addConfig() {
@@ -1042,6 +1043,21 @@
                 })
                 arguments.next().css({ "width": "auto" });
 
+                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
+
+                $('<div class="mcu-build-option-label">').text("Creation Params:").appendTo(row4);
+                let creation = $('<input>').appendTo(row4)
+                creation.typedInput({
+                    type: "json",
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+                        data.creation = value;
+                        persist_config();
+                    }
+                })
+                creation.next().css({ "width": "auto" });
+                $("<span/>").text("=> XS Machine Allocation").css({ "margin-left": "20px", "font-size": "x-small" }).appendTo(row4);
+
                 // Now initialize the form
                 let _target = data.platform.slice(0, data.platform.indexOf("/"));
                 target.typedInput("value", data.platform == "" ? "sim" : _target);
@@ -1063,6 +1079,7 @@
                     instrumentation.typedInput("value", _instr.join(','));
                 }
                 arguments.typedInput("value", data.arguments);
+                creation.typedInput("value", data.creation);
 
                 initializing = false;
             },

@@ -1,0 +1,12 @@
+{
+	"include": [
+	],
+	"modules": {
+		"*": [
+			"./fs"
+		]
+	},
+	"preload": [
+		"fs"
+	]
+}

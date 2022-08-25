@@ -21,11 +21,14 @@ You may follow the build process on the tab `Console Monitor`.
 ## Implemented Functionality
 
 - [x] Select flows to build.
-- [x] UI to define build parameters.
+- [x] UI to define build targets & parameters.
 - [x] Console monitor - to follow the build process.
 - [x] Display status message of a node (running @ MCU) in the editor.
 - [x] Forward user trigger (e.g. `inject` node) to MCU.
 - [ ] Debug node (from MCU back into the editor).
+- [ ] Create `manifest.json` files for (any kind of) nodes / npm packages.
+- [ ] `manifest.json` [library](#manifestjson) - providing pre-defined build parameters for (node modules and) npm packages
+- [ ] Build flows when running Node-RED as service on Raspberry Pi.
 
 ## Test Case
 We're able to run this (currently minimalistic) flow @ the MCU simulator and display it's feedback into the Node-RED editor.
@@ -37,7 +40,7 @@ We're able to run this (currently minimalistic) flow @ the MCU simulator and dis
 ```
 [
     {
-        "id": "b8a90445a0b6a4f4",
+        "id": "18785fa6f5606659",
         "type": "tab",
         "label": "MCU Tester",
         "disabled": false,
@@ -46,9 +49,9 @@ We're able to run this (currently minimalistic) flow @ the MCU simulator and dis
         "_mcu": true
     },
     {
-        "id": "7fe927c5ce70aff8",
+        "id": "1eeaa9a8a8c6f9f8",
         "type": "inject",
-        "z": "b8a90445a0b6a4f4",
+        "z": "18785fa6f5606659",
         "name": "",
         "props": [
             {
@@ -60,21 +63,21 @@ We're able to run this (currently minimalistic) flow @ the MCU simulator and dis
         "once": false,
         "onceDelay": "3",
         "topic": "",
-        "payload": "",
-        "payloadType": "date",
+        "payload": "TEST",
+        "payloadType": "str",
         "_mcu": true,
-        "x": 200,
-        "y": 260,
+        "x": 330,
+        "y": 200,
         "wires": [
             [
-                "799b7e8fcf64e1fa"
+                "8f505d28fa1fb6e0"
             ]
         ]
     },
     {
-        "id": "799b7e8fcf64e1fa",
+        "id": "da00311ba5215864",
         "type": "debug",
-        "z": "b8a90445a0b6a4f4",
+        "z": "18785fa6f5606659",
         "name": "Debug from MCU",
         "active": true,
         "tosidebar": true,
@@ -83,11 +86,25 @@ We're able to run this (currently minimalistic) flow @ the MCU simulator and dis
         "complete": "true",
         "targetType": "full",
         "statusVal": "payload",
-        "statusType": "msg",
+        "statusType": "auto",
         "_mcu": true,
-        "x": 430,
-        "y": 260,
+        "x": 690,
+        "y": 200,
         "wires": []
+    },
+    {
+        "id": "8f505d28fa1fb6e0",
+        "type": "lower-case",
+        "z": "18785fa6f5606659",
+        "name": "",
+        "_mcu": true,
+        "x": 490,
+        "y": 200,
+        "wires": [
+            [
+                "da00311ba5215864"
+            ]
+        ]
     }
 ]
 ```
@@ -102,3 +119,38 @@ We're able to run this (currently minimalistic) flow @ the MCU simulator and dis
 cd <path to your .node-red folder>
 npm install https://github.com/ralphwetzel/node-red-mcu-plugin
 ```
+
+## Technical Details
+
+### Build Environment
+This plugin creates the build environment in 
+```
+<userDir>/mcu-plugin-cache
+```
+Please refer to the [Node-RED documentation](https://nodered.org/docs/user-guide/runtime/configuration) for details regarding `<userDir>`.
+
+There's a dedicated folder for each of the build configurations you have defined in the Node-RED editor.
+This folder - currently - is being emptied prio to each build run. 
+
+### manifest.json
+The [documentation of Moddable SDK](https://github.com/Moddable-OpenSource/moddable/blob/public/documentation/tools/manifest.md#manifest) states that
+
+> [a] manifest is a JSON file that describes the modules and resources necessary to build a Moddable app.
+
+One major task of this plugin is therefore the creation of the necessary `manifest.json` file(s) to enable the process of building the flows for the MCU.
+
+As all Node-RED nodes are organized as `npm` packages, this plugin extracts the necessary information from the dedicated `package.json` file(s) to process it into a manifest. Dependencies are resolved & additional manifests cerated as demanded.
+
+The manifests are organized in a structure mirroring the `node_modules` directory.
+
+There are two issue though:
+- Dependencies, that are not listed in `package.json` cannot be resolved. This is especially relevant in cases when a node `require`s one of the `Node.js` core libraries.
+- The `manifest.json` auto creation process (currently & definitely for some time) has it's limitations.
+
+To compensate for these issues, this plugin provides a (currently very small, potentially growing) manifest library for dedicated `npm` packages and `Node.js` modules. This allows to provide fine-tuned manifests that are guaranteed to be exhaustive; in the process to setup manifests those from the library have preference versus the generated ones.
+
+> **This manifest library calls for your contribution!** Feel free to provide manifests for the nodes & packages you're working with. Each  manifest added improves the performance of the node-red-mcu eco system!
+
+Let me give you a <span style="color: red">**WARNING:**</span>
+I'm pretty sure that **every** (non-standard) node you try to build for MCU will currently demand some additional efforts. Please raise an issue if you need support setting up the `manifest.json` accordingly.
+

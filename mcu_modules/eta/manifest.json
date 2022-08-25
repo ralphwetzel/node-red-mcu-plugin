@@ -1,0 +1,25 @@
+{
+  "//": {
+    "***": "https://github.com/ralphwetzel/node-red-mcu-plugin",
+    "npm": "eta",
+    "xs": "manifest.json",
+    "@": "2022-08-23T06:31:49.793Z",
+    "ref": "https://github.com/Moddable-OpenSource/moddable",
+    "template": {
+      "build": ["MCUMODULES"],
+      "modules": [ "eta" ]
+    }
+  },
+  "build": {},
+  "include": [
+    "$(MCUMODULES)/require/manifest.json"
+  ],
+  "modules": {
+    "*": []
+  },
+  "platforms": {
+		"...": {
+			"warning": "eta tends to create a StackOverflow error when compiling the template on MCU"
+		}
+	}	
+}

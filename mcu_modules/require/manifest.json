@@ -1,0 +1,14 @@
+{
+	"include": [
+		"../path/manifest.json",
+		"../fs/manifest.json"
+	],
+	"modules": {
+		"*": [
+			"./require"
+		]
+	},
+	"preload": [
+		"require"
+	]
+}

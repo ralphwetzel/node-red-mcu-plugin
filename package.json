@@ -1,6 +1,6 @@
 {
   "name": "@ralphwetzel/node-red-mcu-plugin",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Plugin to support the Node-RED implementation for Microcontrollers",
   "node-red": {
     "plugins": {
@@ -19,7 +19,10 @@
     "node-red-mcu"
   ],
   "dependencies": {
+    "clone": "^2.1.2",
     "fs-extra": "^10.1.0",
+    "nanoid": "<4",
+    "resolve-package-path": "^4.0.3",
     "serialport": "^10.4.0",
     "x2js": "^3.4.3"
   },
