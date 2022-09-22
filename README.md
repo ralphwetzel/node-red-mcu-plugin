@@ -25,7 +25,7 @@ You may follow the build process on the tab `Console Monitor`.
 - [x] Console monitor - to follow the build process.
 - [x] Display status message of a node (running @ MCU) in the editor.
 - [x] Forward user trigger (e.g. `inject` node) to MCU.
-- [ ] Debug node (from MCU back into the editor).
+- [x] Debug node (from MCU back into the editor).
 - [ ] Create `manifest.json` files for (any kind of) nodes / npm packages.
 - [ ] `manifest.json` [library](#manifestjson) - providing pre-defined build parameters for (node modules and) npm packages
 - [ ] Build flows when running Node-RED as service on Raspberry Pi.
@@ -116,9 +116,11 @@ We're able to run this (currently minimalistic) flow @ the MCU simulator and dis
 ## Installation
 
 ```
-cd <path to your .node-red folder>
+cd <userDir>
 npm install https://github.com/ralphwetzel/node-red-mcu-plugin
 ```
+Please refer to the [Node-RED documentation](https://nodered.org/docs/user-guide/runtime/configuration) for details regarding `<userDir>`.
+
 
 ## Next Steps / To Do List
 - [ ] Add further Node.js modules
@@ -144,7 +146,7 @@ The [documentation of Moddable SDK](https://github.com/Moddable-OpenSource/modda
 
 One major task of this plugin is therefore the creation of the necessary `manifest.json` file(s) to enable the process of building the flows for the MCU.
 
-As all Node-RED nodes are organized as `npm` packages, this plugin extracts the necessary information from the dedicated `package.json` file(s) to process it into a manifest. Dependencies are resolved & additional manifests cerated as demanded.
+As all Node-RED nodes are organized as `npm` packages, this plugin extracts the necessary information from the dedicated `package.json` file(s) to process it into a manifest. Dependencies are resolved & additional manifests created as demanded.
 
 The manifests are organized in a structure mirroring the `node_modules` directory.
 
