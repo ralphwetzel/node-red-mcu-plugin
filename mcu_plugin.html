@@ -851,8 +851,10 @@
                     enabledLabel: "Build",
                     disabledLabel: "Build"
                 }).on("change", function () {
-                    if ($(b).prop("checked") === true) {
-                        $(b).prop("checked", false);
+
+                    self = this;
+
+                    function build(data) {
 
                         if (console_view) {
                             console_view.val("");
@@ -886,15 +888,57 @@
                             success: function (resp) {
                                 // buildButton.toggleClass("disabled",!debuggerEnabled);
                                 // console.log("success");
-                                $(b).trigger("change");
+                                $(self).trigger("change");
                             },
                             error: function (jqXHR, textStatus, errorThrown) {
                                 // console.log(jqXHR,textStatus,errorThrown);
-                                $(b).trigger("change");
+                                $(self).trigger("change");
                                 flashTab("__console__");
                             }
                         });
 
+                    }
+
+                    if ($(b).prop("checked") === true) {
+                        $(b).prop("checked", false);
+
+                        if (RED.nodes.dirty() === true) {
+                            let notify_deploy = RED.notify("Deploy changes prior building for MCU?", {
+                                type: "info",
+                                modal: true,
+                                fixed: true,
+                                buttons: [
+                                    {
+                                        text: "No",
+                                        click: function (e) {
+                                            notify_deploy.close();
+                                            build(data);
+                                            return;
+                                        }
+                                    },
+                                    {
+                                        text: "Yes",
+                                        class: "primary",
+                                        click: function (e) {
+                                            notify_deploy.close();
+                                            $('#red-ui-header-button-deploy').trigger("click");
+                                            build(data);
+                                            return;
+                                        }
+                                    },
+                                    {
+                                        text: "Cancel",
+                                        click: function (e) {
+                                            $(b).prop("checked", false);
+                                            notify_deploy.close();
+                                            return;
+                                        }
+                                    }
+                                ]
+                            });
+                        } else {
+                            build(data);
+                        }
                     }
                 });
 
