@@ -697,6 +697,8 @@
             removable: true,
             addItem: function (container, index, data) {
 
+                let self = this;
+
                 if (isEmpty(data)) {
                     data = addConfig();
                     persist_config();
@@ -705,6 +707,52 @@
                         persist_config();
                     }
                 }
+
+                // Patch onclick of the item-remove-button
+                // original @ editableList.js / 307
+                container.parent().find("a.red-ui-editableList-item-remove").unbind("click").on("click", function (evt) {
+                    console.log("clickhandler");
+                    evt.preventDefault();
+
+                    let that = self;
+                    let row = container;
+
+                    function del_config() {
+                        let dt = row.data('data');
+                        let li = row.parent();
+                        li.addClass("red-ui-editableList-item-deleting")
+                        li.fadeOut(300, function () {
+                            $(this).remove();
+                            if (that.removeItem) {
+                                that.removeItem(dt);
+                            }
+                        });
+                    }
+
+                    let notify_delete = RED.notify("Delete this Build Configuration?", {
+                        type: "compact",
+                        modal: true,
+                        fixed: true,
+                        buttons: [
+                            {
+                                text: "No",
+                                click: function (e) {
+                                    notify_delete.close();
+                                    return;
+                                }
+                            },
+                            {
+                                text: "Yes",
+                                class: "primary",
+                                click: function (e) {
+                                    notify_delete.close();
+                                    del_config();
+                                    return;
+                                }
+                            }
+                        ]
+                    });
+                });
 
                 let initializing = true;
 
