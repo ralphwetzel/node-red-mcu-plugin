@@ -1188,7 +1188,8 @@
             sortItems: function (items) {
                 let bc = [];
                 for (let i = 0; i < items.length; i += 1) {
-                    bc.push(items[i].data);
+                    let d = $(items[i]).data("data");   // data() and "data" is a coincidence here!!
+                    bc.push(d);
                 }
                 build_config = bc;
                 persist_config();
