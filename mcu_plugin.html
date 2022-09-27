@@ -1051,8 +1051,14 @@
                                         click: function (e) {
                                             notify_deploy.close();
                                             $('#red-ui-header-button-deploy').trigger("click");
-                                            build(data);
-                                            return;
+                                            let builder = function() {
+                                                RED.events.off("deploy", builder);
+                                                build(data);
+                                            }
+                                            RED.events.on("deploy", builder);
+                                            setTimeout(function() {
+                                                RED.events.off("deploy", builder);
+                                            }, 1000);
                                         }
                                     },
                                     {
