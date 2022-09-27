@@ -339,7 +339,7 @@ module.exports = function(RED) {
         }
 */
 
-        if (config._mcu && config._mcu===true) {
+        if (config._mcu?.mcu === true) {
             console.log("@mcu");
             if (config.type) {
                 let t = library.get_mcumode_type(config.type)
@@ -745,8 +745,10 @@ module.exports = function(RED) {
         // Make the flows.json file & and add manifests of the nodes
         let nodes = [];
 
-        RED.nodes.eachNode(function(n) {
-            if (n._mcu) {
+        RED.nodes.eachNode(function(nn) {
+            if (nn._mcu?.mcu === true) {
+
+                let n = clone(nn);
 
                 // add node to flows.json
                 nodes.push(n);
