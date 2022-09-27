@@ -731,6 +731,10 @@ module.exports = function(RED) {
         // manifest.add_module({"source": "./flows", "transform": "nodered2mcu"})
         // manifest.include_manifest("./manifest_flows.json");
 
+        // Add MODULES build path
+        const mbp = path.resolve(MODDABLE, "./modules");
+        manifest.add_build("MODULES", mbp);
+
         // Add root manifest from node-red-mcu
         // ToDo: node-red-mcu shall be a npm package as well - soon!
         const root_manifest_path = "./node-red-mcu"
