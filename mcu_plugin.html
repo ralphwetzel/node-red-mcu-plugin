@@ -1302,9 +1302,25 @@
 
                 if (response && response.config) {
                     build_config = response.config;
-                    for (let i = 0; i < build_config.length; i += 1) {
+
+                    let i = 0;
+                    while (i < build_config.length) {
+
+                        let bc = build_config[i];
+                        if (bc === null) {
+                            let bc = build_config[i];
+                            build_config.splice(i, 1);
+                            delete bc;
+                            continue;
+                        }
                         config_view.editableList('addItem', build_config[i]);
+                        i+=1;
                     }
+
+                    if (build_config.length < response.config.length) {
+                        persist_config();
+                    }
+
                 }
             },
             error: function (jqXHR, textStatus, errorThrown) {
