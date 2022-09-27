@@ -763,6 +763,10 @@ module.exports = function(RED) {
                     });
                     manifest.include_manifest(`./manifest_${n.id}.json`)
                 }
+
+                let running_node = RED.nodes.getNode(n.id);
+                running_node?.emit("build4mcu", n, manifest);
+
                 // add node to flows.json
                 nodes.push(n);
 
