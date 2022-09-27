@@ -1360,6 +1360,36 @@ module.exports = function(RED) {
                     }
                 })
 
+                proxy.on("error", (data) => {
+                    console.log(data);
+                    if (data.source?.id) {
+
+                        let id = data.source.id;
+                        let node = RED.nodes.getNode(id);
+                        if (node) {
+                            console.log(data.error);
+                            node.error(data.error);
+                            // delete data.source;
+                            // node.receive(data);
+                        }
+                    }
+                })
+
+                proxy.on("warn", (data) => {
+                    console.log(data);
+                    if (data.source?.id) {
+
+                        let id = data.source.id;
+                        let node = RED.nodes.getNode(id);
+                        if (node) {
+                            console.log(data.warn);
+                            node.warn(data.warn);
+                            // delete data.source;
+                            // node.receive(data);
+                        }
+                    }
+                })
+
                 // build_and_run()
                 // .then(msg => { console.log(msg) })
                 // .catch(msg => {console.log("error @ build_and_run", msg)});
