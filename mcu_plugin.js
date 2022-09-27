@@ -750,6 +750,15 @@ module.exports = function(RED) {
 
                 let n = clone(nn);
 
+                if (n.type == "tab" && n._mcu?.manifest?.trim?.().length>0) {
+                    // Write the flow's manifest.json
+                    fs.writeFileSync(path.join(dest, `manifest_${n.id}.json`), n._mcu.manifest.trim(), (err) => {
+                        if (err) {
+                            throw err;
+                        }
+                    });
+                    manifest.include_manifest(`./manifest_${n.id}.json`)
+                }
                 // add node to flows.json
                 nodes.push(n);
 
