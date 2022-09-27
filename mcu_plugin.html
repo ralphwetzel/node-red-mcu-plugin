@@ -271,6 +271,69 @@
         "ports": []
     };
     
+    RED.editor.registerEditPane("editor-tab-manifest", function(node) {
+        return {
+            label: "MCU: manifest.json",
+            name: "manifest.json",
+            iconClass: "fa fa-microchip",
+
+            create: function(container) {
+                this.editor = buildManifestForm(container,node);
+            },
+            resize: function(size) {
+                this.editor.resize();
+            },
+            close: function() {
+                this.editor.destroy();
+                this.editor = null;
+            },
+            show: function() {
+                this.editor.focus();
+            },
+            apply: function(editState) {
+                let new_manifest = this.editor.getValue();
+                if (node._mcu?.manifest) {
+                    // Has existing manifest property
+                    if (new_manifest.trim() === "") {
+                        // New value is blank - remove the property
+                        editState.changed = true;
+                        editState.changes._mcu = structuredClone(node._mcu);
+                        delete node._mcu.manifest;
+                    } else if (node._mcu.manifest !== new_manifest) {
+                        // New value is different
+                        editState.changed = true;
+                        editState.changes._mcu = structuredClone(node._mcu);
+                        node._mcu.manifest = new_manifest;
+                    }
+                } else {
+                    // No existing manifest
+                    if (new_manifest.trim() !== "") {
+                        editState.changed = true;
+                        editState.changes._mcu = structuredClone(node._mcu);
+                        node._mcu.manifest = new_manifest;
+                    }
+                }
+            }
+        };
+    }, function(node) {
+        return (node.type === "tab" && node._mcu?.mcu === true);
+    });
+
+    function buildManifestForm(container,node) {
+        var dialogForm = $('<form class="dialog-form form-horizontal" autocomplete="off"></form>').appendTo(container);
+        var toolbarRow = $('<div></div>').appendTo(dialogForm);
+        var row = $('<div class="form-row node-text-editor-row" style="position:relative; padding-top: 4px; height: 100%"></div>').appendTo(dialogForm);
+        var editorId = "node-info-input-info-editor-"+Math.floor(1000*Math.random());
+        $('<div style="height: 100%" class="node-text-editor" id="'+editorId+'" ></div>').appendTo(row);
+        var nodeManifestEditor = RED.editor.createEditor({
+            id: editorId,
+            mode: 'ace/mode/json',
+            stateId: RED.editor.generateViewStateId("node", node, "manifest"),
+            value: node._mcu?.manifest || ""
+        });
+        node.manifest = nodeManifestEditor;
+        return nodeManifestEditor;
+    }
 
     RED.plugins.registerPlugin("node-red-mcu", {
         
