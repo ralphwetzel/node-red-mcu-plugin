@@ -74,7 +74,7 @@
             icon: "red-ui-icons red-ui-icons-flow",
             gutter: getGutter(ws),
             checkbox: true,
-            selected: ws._mcu===true
+            selected: (ws._mcu?.mcu == true) ?? false
         }
 
         flowData.push(objects[ws.id]);
@@ -457,7 +457,7 @@
             let t = RED.nodes.getType(nt);
             if (!t) return;
 
-            t.defaults["_mcu"] = { value: false }
+            t.defaults["_mcu"] = { value: {"mcu": false} }
 
             // Patch the onadd function of nodes to take over the flow's _mcu status
             if (nt !== "tab") {
@@ -465,7 +465,10 @@
                 t.onadd = function() {
                     let n = this;
                     if (n && n.type !== "tab" && n.z) {
-                        n._mcu = (RED.nodes.workspace(n.z)?._mcu === true) ?? false;
+                        let ws = RED.nodes.workspace(n.z);
+                        let _mcu = n._mcu ?? {};
+                        _mcu.mcu = (RED.nodes.workspace(n.z)?._mcu?.mcu === true) ?? false;
+                        n._mcu = _mcu;
                     }
                     if (!onadd_orig) return;
                     return onadd_orig.call(n);
@@ -566,6 +569,11 @@
 
             RED.nodes.eachWorkspace(function (ws) {
 
+                if (typeof(ws._mcu) !== "object") {
+                    delete ws._mcu;
+                }
+                ws._mcu ??= { "mcu": false };
+
                 // c === 3: node has flag but need none; remove it
                 // c === 2: node got mcu flag
                 // c === 1: node already has flag
@@ -575,7 +583,7 @@
                 for (let i = 0; i < f2bl; i += 1) {
                     // mark the flow
                     if (ws.id && ws.id === f2b[i]) {
-                        if (ws._mcu === true) {
+                        if (ws._mcu?.mcu === true) {
                             c = 1;
                         } else {
                             c = 2;
@@ -585,11 +593,13 @@
                 }
 
                 if (c > 0) {
-                    ws._mcu = true;
+                    ws._mcu.mcu = true;
                 }
-                if (c < 1 && ws._mcu) {
-                    delete ws._mcu;
-                    c = 3;
+                if (c < 1) {
+                    if (ws._mcu.mcu === true) {
+                        c = 3;
+                    }
+                    ws._mcu.mcu = false;
                 }
                 if (c > 1) {
                     ws.changed = true;
@@ -599,6 +609,11 @@
             })
 
             RED.nodes.eachNode(function (node) {
+
+                if (typeof(node._mcu) !== "object") {
+                    delete node._mcu;
+                }
+                node._mcu ??= { "mcu": false };
 
                 // c === 3: node has flag but need none; remove it
                 // c === 2: node got mcu flag
@@ -610,7 +625,7 @@
 
                     // mark the nodes
                     if (node.z && node.z === f2b[i]) {
-                        if (node._mcu === true) {
+                        if (node._mcu.mcu === true) {
                             c = 1;
                         } else {
                             c = 2;
@@ -620,12 +635,15 @@
                 }
 
                 if (c > 0) {
-                    node._mcu = true;
+                    node._mcu.mcu = true;
                 }
-                if (c < 1 && node._mcu) {
-                    delete node._mcu;
-                    c = 3;
+                if (c < 1) {
+                    if (node._mcu.mcu === true) { 
+                        c = 3; 
+                    };
+                    node._mcu.mcu = false;
                 }
+
                 if (c > 1) {
                     node.changed = true;
                     RED.events.emit("nodes:change", node);
