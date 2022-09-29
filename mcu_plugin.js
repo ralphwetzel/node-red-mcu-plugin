@@ -1,5 +1,5 @@
 const clone = require("clone");
-const { exec, spawn } = require('node:child_process');
+const { exec } = require('node:child_process');
 const fs = require('fs-extra');
 const os = require("os");
 const path = require("path");
@@ -692,7 +692,7 @@ module.exports = function(RED) {
         ];
         let mainjs_end = [
             'import flows from "flows";',
-            'trace("post", "\\n");',
+            // 'trace("post", "\\n");',
             'RED.build(flows);',
         ]
 
@@ -937,7 +937,7 @@ module.exports = function(RED) {
             "HOME": process.env.HOME,
             "SHELL": process.env.SHELL,
             "PATH": process.env.PATH,
-            "MODDABLE": MODDABLE,
+            "MODDABLE": MODDABLE
         }
 
         let platform = options.platform.split("/");
@@ -1040,16 +1040,19 @@ module.exports = function(RED) {
             ]
         }
 
-        bcmds = build_commands[pid];
+        let bcmds = [build_commands[pid].join(" && ")];
+
+        switch (os.platform()) {
+            case "linux":
+                shell_options["SHELL"] = "/bin/bash"
+                break;
+        }
 
         const run_cmd = cmd => new Promise((resolve, reject) => {
 
             publish_stdout(`> ${cmd}`);
 
-            let builder = exec(cmd, {
-                "cwd": make_dir,
-                "env": env
-            }, (err, stdout, stderr) => {
+            let builder = exec(cmd, shell_options, (err, stdout, stderr) => {
                 if (err) {
                     reject(err)
                 }

@@ -28,7 +28,7 @@ You may follow the build process on the tab `Console Monitor`.
 - [x] Debug node (from MCU back into the editor).
 - [ ] Create `manifest.json` files for (any kind of) nodes / npm packages.
 - [ ] `manifest.json` [library](#manifestjson) - providing pre-defined build parameters for (node modules and) npm packages
-- [ ] Build flows when running Node-RED as service on Raspberry Pi.
+- [x] Build flows when running Node-RED as service on Raspberry Pi.
 
 ## Test Case
 We're able to run this (currently minimalistic) flow @ the MCU simulator and display it's feedback into the Node-RED editor.
@@ -121,6 +121,53 @@ npm install https://github.com/ralphwetzel/node-red-mcu-plugin
 ```
 Please refer to the [Node-RED documentation](https://nodered.org/docs/user-guide/runtime/configuration) for details regarding `<userDir>`.
 
+### Raspberry Pi: Additional preparation steps 
+
+#### Define MODDABLE
+The Node-RED documentation states a [slick comment]((https://nodered.org/docs/user-guide/environment-variables#running-as-a-service)) that things are a bit different when Node-RED is run as a service:
+> When Node-RED is running as a service having been installed using the provided [script](https://nodered.org/docs/getting-started/raspberrypi), it will not have access to environment variables that are defined only in the calling process.
+
+The _solution_ is stated as well:
+
+> In this instance, environment variables can be defined in the settings file by adding `process.env.FOO='World';`
+placed outside the module.exports section. Alternatively, variables can be defined as part of the systemd service by placing statements of the form `ENV_VAR='foobar'` in a file named environment within the Node-RED user directory, `~/.node-red`.
+
+Thus, please add <MODDABLE> as environment variable to your <settings.js>.
+
+``` javascript
+module.exports = {
+[...]
+}
+
+// Please add MODDABLE *outside* the module.exports definition!
+process.env.MODDABLE = "/home/pi/Projects/moddable"
+```
+
+Make sure to provide the absolute path to the <MODDABLE> directory. If you're unsure, just run the following command in a shell to get the current definition:
+
+``` bash
+pi@somebox:/ $echo $MODDABLE
+/home/pi/Projects/moddable
+pi@somebox:/ $ 
+
+```
+
+#### Update your IDF toolchain
+There's a [significant issue in IDFv4.4](https://github.com/espressif/esp-idf/issues/7857) that lets the build process error out in certain situations with a dramatic comment:
+
+> gcc is not able to compile a simple test program.
+
+Whereas the issue documentation does not provide a solid fix for this situation, you **might be** able to overcome it by updating your toolchain - to the latest <release/v4.4> branch.
+
+``` bash
+cd ~/esp32/esp-idf
+git checkout release/v4.4
+git submodule update
+./install.sh
+. export.sh
+```
+
+Please be advised that updating the toolchain in that way could have sideeffects that cannot be predicted & might lead you into additional trouble! Thus: take care!
 
 ## Next Steps / To Do List
 - [ ] Add further Node.js modules
