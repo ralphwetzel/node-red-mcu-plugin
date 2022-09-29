@@ -132,7 +132,7 @@ The _solution_ is stated as well:
 > In this instance, environment variables can be defined in the settings file by adding `process.env.FOO='World';`
 placed outside the module.exports section. Alternatively, variables can be defined as part of the systemd service by placing statements of the form `ENV_VAR='foobar'` in a file named environment within the Node-RED user directory, `~/.node-red`.
 
-Thus, please add <MODDABLE> as environment variable to your <settings.js>.
+Thus, please add `MODDABLE` as environment variable to your `settings.js`.
 
 ``` javascript
 module.exports = {
@@ -143,7 +143,7 @@ module.exports = {
 process.env.MODDABLE = "/home/pi/Projects/moddable"
 ```
 
-Make sure to provide the absolute path to the <MODDABLE> directory. If you're unsure, just run the following command in a shell to get the current definition:
+Make sure to provide the absolute path to the `MODDABLE` directory. If you're unsure, just run the following command in a shell to get the current definition:
 
 ``` bash
 pi@somebox:/ $echo $MODDABLE
@@ -157,7 +157,7 @@ There's a [significant issue in IDFv4.4](https://github.com/espressif/esp-idf/is
 
 > gcc is not able to compile a simple test program.
 
-Whereas the issue documentation does not provide a solid fix for this situation, you **might be** able to overcome it by updating your toolchain - to the latest <release/v4.4> branch.
+Whereas the issue documentation does not provide a solid fix for this situation, you **might be** able to overcome it by updating your toolchain - to the latest `release/v4.4` branch.
 
 ``` bash
 cd ~/esp32/esp-idf
