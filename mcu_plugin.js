@@ -748,8 +748,16 @@ module.exports = function(RED) {
 
         // Make the flows.json file & and add manifests of the nodes
         let nodes = [];
+        let configNodes = {};
 
+        // identify the nodes flagged with _mcu & as well the config nodes
         RED.nodes.eachNode(function(nn) {
+
+            // the "official" test for a config node
+            if (!nn.hasOwnProperty('x') && !nn.hasOwnProperty('y')) {
+                configNodes[nn.id] = { "node": clone(nn) };
+            }
+
             if (nn._mcu?.mcu === true) {
 
                 let n = clone(nn);
@@ -769,34 +777,67 @@ module.exports = function(RED) {
 
                 // add node to flows.json
                 nodes.push(n);
+            }
+        });
 
-                // verify that a manifest is available, create stubs for missing ones
-                let node = library.get_node(n.type);
-                if (!node) return;
+        // check if config nodes are referenced
+        function test_for_config_node(obj) {
+            for (const key in obj) {
+                
+                let ok = obj[key];
 
-                let module = node.module;
-                if (!module) return;
-
-                if (module === "node-red") {
-                    console.log(`Type "${n.type}" = core node: No manifest added.`);
-                    return;
-                }
-    
-                if (manifest.resolver_paths.indexOf(node.path) < 0) {
-                    manifest.resolver_paths.push(node.path)
-                }
-
-                let p = manifest.get_manifest_of_module(module, dest);
-                if (p && typeof(p) === "string") {
-                    manifest.include_manifest(p);
-                    return;
-                }
-                p = manifest.create_manifests_for_module(module, dest)
-                if (p && typeof(p) === "string") {
-                    manifest.include_manifest(p);
-                    mainjs.push(`import "${module}"`);
+                if (ok && typeof(ok)==="object") {
+                    test_for_config_node(ok);
+                } else {
+                    if (key!=="id" && key!=="z" && key!=="type" && typeof(ok)==="string" && ok.length == 16) {
+                        if (configNodes[ok]) {
+                            configNodes[ok]["mcu"] = true;
+                        }
+                    }        
                 }
             }
+        }
+
+        for (let i=0;i<nodes.length; i++) {
+            test_for_config_node(nodes[i]);
+        }
+
+        // add config nodes to the mcu nodes
+        for (key in configNodes) {
+            if (configNodes[key].mcu === true) {
+                nodes.push(configNodes[key].node);
+            }
+        }
+
+        nodes.forEach(function(n) {
+
+            // verify that a manifest is available, create stubs for missing ones
+            let node = library.get_node(n.type);
+            if (!node) return;
+
+            let module = node.module;
+            if (!module) return;
+
+            if (module === "node-red") {
+                console.log(`Type "${n.type}" = core node: No manifest added.`);
+                return;
+            }
+
+            if (manifest.resolver_paths.indexOf(node.path) < 0) {
+                manifest.resolver_paths.push(node.path)
+            }
+
+            let p = manifest.get_manifest_of_module(module, dest);
+            if (p && typeof(p) === "string") {
+                manifest.include_manifest(p);
+                return;
+            }
+            p = manifest.create_manifests_for_module(module, dest)
+            if (p && typeof(p) === "string") {
+                manifest.include_manifest(p);
+                mainjs.push(`import "${module}"`);
+            }
+
         });
 
         // In case this is going to be changed again ;)

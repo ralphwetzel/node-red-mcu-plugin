@@ -29,6 +29,7 @@ You may follow the build process on the tab `Console Monitor`.
 - [ ] Create `manifest.json` files for (any kind of) nodes / npm packages.
 - [ ] `manifest.json` [library](#manifestjson) - providing pre-defined build parameters for (node modules and) npm packages
 - [x] Build flows when running Node-RED as service on Raspberry Pi.
+- [x] Include relevant config nodes in the MCU build.
 
 ## Test Case
 We're able to run this (currently minimalistic) flow @ the MCU simulator and display it's feedback into the Node-RED editor.
