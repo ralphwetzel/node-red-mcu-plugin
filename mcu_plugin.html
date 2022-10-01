@@ -972,14 +972,15 @@
 
                 let row3 = $('<div>').css({ "margin-top": "4px" }).appendTo(inputRows);
 
-                let b = $('<input type="checkbox"/>').css({ "margin-left": "20px" }).appendTo(row3)
-                b.toggleButton({
-                    enabledIcon: "fa-gear fa-spin fa-fw",
-                    disabledIcon: "fa-cog",
-                    // baseClass: "red-ui-sidebar-header-button"
-                    enabledLabel: "Build",
-                    disabledLabel: "Build"
-                }).on("change", function () {
+                let bb = $("<button>").addClass("ui-button ui-corner-all ui-widget").appendTo(row3);
+                // bb.html('<i class="fa fa-cog" aria-hidden="true"></i><span>  Build</span>');
+                bb.css({background:"rgb(7, 48, 112)", color: "white"});
+                bb.button({
+                    label: '<i class="fa fa-cog" aria-hidden="true"></i><span>  Build</span>'
+                });
+
+                bb.on("click", function() {
+                    bb.find("i").addClass("fa-spin");
 
                     self = this;
 
@@ -1017,65 +1018,172 @@
                             success: function (resp) {
                                 // buildButton.toggleClass("disabled",!debuggerEnabled);
                                 // console.log("success");
-                                $(self).trigger("change");
+                                bb.find("i").removeClass("fa-spin");
                             },
                             error: function (jqXHR, textStatus, errorThrown) {
                                 // console.log(jqXHR,textStatus,errorThrown);
-                                $(self).trigger("change");
+                                bb.find("i").removeClass("fa-spin");
                                 flashTab("__console__");
                             }
                         });
 
                     }
 
-                    if ($(b).prop("checked") === true) {
-                        $(b).prop("checked", false);
-
-                        if (RED.nodes.dirty() === true) {
-                            let notify_deploy = RED.notify("Deploy changes prior building for MCU?", {
-                                type: "info",
-                                modal: true,
-                                fixed: true,
-                                buttons: [
-                                    {
-                                        text: "No",
-                                        click: function (e) {
-                                            notify_deploy.close();
-                                            build(data);
-                                            return;
-                                        }
-                                    },
-                                    {
-                                        text: "Yes",
-                                        class: "primary",
-                                        click: function (e) {
-                                            notify_deploy.close();
-                                            $('#red-ui-header-button-deploy').trigger("click");
-                                            let builder = function() {
-                                                RED.events.off("deploy", builder);
-                                                build(data);
-                                            }
-                                            RED.events.on("deploy", builder);
-                                            setTimeout(function() {
-                                                RED.events.off("deploy", builder);
-                                            }, 1000);
-                                        }
-                                    },
-                                    {
-                                        text: "Cancel",
-                                        click: function (e) {
-                                            $(b).prop("checked", false);
-                                            notify_deploy.close();
-                                            return;
-                                        }
+                    if (RED.nodes.dirty() === true) {
+                        let notify_deploy = RED.notify("Deploy changes prior building for MCU?", {
+                            type: "info",
+                            modal: true,
+                            fixed: true,
+                            buttons: [
+                                {
+                                    text: "No",
+                                    click: function (e) {
+                                        notify_deploy.close();
+                                        build(data);
+                                        return;
                                     }
-                                ]
-                            });
-                        } else {
-                            build(data);
-                        }
+                                },
+                                {
+                                    text: "Yes",
+                                    class: "primary",
+                                    click: function (e) {
+                                        notify_deploy.close();
+                                        $('#red-ui-header-button-deploy').trigger("click");
+                                        let builder = function() {
+                                            RED.events.off("deploy", builder);
+                                            build(data);
+                                        }
+                                        RED.events.on("deploy", builder);
+                                        setTimeout(function() {
+                                            RED.events.off("deploy", builder);
+                                        }, 1000);
+                                    }
+                                },
+                                {
+                                    text: "Cancel",
+                                    click: function (e) {
+                                        $(b).prop("checked", false);
+                                        notify_deploy.close();
+                                        return;
+                                    }
+                                }
+                            ]
+                        });
+                    } else {
+                        build(data);
                     }
+                })
+
+                RED.events.on("runtime-state", function(msg) {
+                    if (bb) {
+                        bb.button( "option", "disabled", msg.state === "stop" );
+                    }                        
                 });
+
+                // let b = $('<input type="checkbox"/>').css({ "margin-left": "20px" }).appendTo(row3)
+                // b.toggleButton({
+                //     enabledIcon: "fa-gear fa-spin fa-fw",
+                //     disabledIcon: "fa-cog",
+                //     // baseClass: "red-ui-sidebar-header-button"
+                //     enabledLabel: "Build",
+                //     disabledLabel: "Build"
+                // }).on("change", function () {
+
+                //     self = this;
+
+                //     function build(data) {
+
+                //         if (console_view) {
+                //             console_view.val("");
+                //         }
+
+                //         // compile the build parameters
+                //         let options = {};
+
+                //         for (key in data) {
+                //             if (key === "more") continue
+                //             else if (key === "debug" || key === "release" || key === "platform") {
+                //                 options[key] = data[key];
+                //             }
+                //             else if (key in build_config_default) {
+                //                 // only forward non-default values
+                //                 if (data[key] !== build_config_default[key]) {
+                //                     options[key] = data[key];
+                //                 }
+                //             } else {
+                //                 options[key] = data[key]
+                //             }
+                //         }
+
+                //         $.ajax({
+                //             url: "mcu/build",
+                //             contentType: "application/json",
+                //             type: "POST",
+                //             data: JSON.stringify({
+                //                 "options": options
+                //             }),
+                //             success: function (resp) {
+                //                 // buildButton.toggleClass("disabled",!debuggerEnabled);
+                //                 // console.log("success");
+                //                 $(self).trigger("change");
+                //             },
+                //             error: function (jqXHR, textStatus, errorThrown) {
+                //                 // console.log(jqXHR,textStatus,errorThrown);
+                //                 $(self).trigger("change");
+                //                 flashTab("__console__");
+                //             }
+                //         });
+
+                //     }
+
+                //     if ($(b).prop("checked") === true) {
+                //         $(b).prop("checked", false);
+
+                //         if (RED.nodes.dirty() === true) {
+                //             let notify_deploy = RED.notify("Deploy changes prior building for MCU?", {
+                //                 type: "info",
+                //                 modal: true,
+                //                 fixed: true,
+                //                 buttons: [
+                //                     {
+                //                         text: "No",
+                //                         click: function (e) {
+                //                             notify_deploy.close();
+                //                             build(data);
+                //                             return;
+                //                         }
+                //                     },
+                //                     {
+                //                         text: "Yes",
+                //                         class: "primary",
+                //                         click: function (e) {
+                //                             notify_deploy.close();
+                //                             $('#red-ui-header-button-deploy').trigger("click");
+                //                             let builder = function() {
+                //                                 RED.events.off("deploy", builder);
+                //                                 build(data);
+                //                             }
+                //                             RED.events.on("deploy", builder);
+                //                             setTimeout(function() {
+                //                                 RED.events.off("deploy", builder);
+                //                             }, 1000);
+                //                         }
+                //                     },
+                //                     {
+                //                         text: "Cancel",
+                //                         click: function (e) {
+                //                             $(b).prop("checked", false);
+                //                             notify_deploy.close();
+                //                             return;
+                //                         }
+                //                     }
+                //                 ]
+                //             });
+                //         } else {
+                //             build(data);
+                //         }
+                //     }
+                // });
 
                 let more = $('<a href="#">')
                     .text("Show more options...")
