@@ -339,6 +339,8 @@ module.exports = function(RED) {
         }
 */
 
+        let orig_type = config.type;
+
         if (config._mcu?.mcu === true) {
             console.log("@mcu");
             if (config.type) {
@@ -355,7 +357,14 @@ module.exports = function(RED) {
             }
         }
 
-        return orig_createNode(flow, config);
+        let node = orig_createNode(flow, config);
+
+        // give mcu replacement nodes access to the proxy
+        if (config.type !== orig_type) {
+            node.__getProxy = getProxy;
+        }
+
+        return node;
     }
 
     let orig_diffConfigs = flowUtil.diffConfigs;
