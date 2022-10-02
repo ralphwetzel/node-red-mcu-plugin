@@ -307,6 +307,11 @@ module.exports = function(RED) {
     // *****
     // Apply a patch to hook into the node creation process of the runtime.
 
+
+    function getProxy() {
+        if (proxy) return proxy;
+    }
+
     let orig_createNode = flowUtil.createNode;
     function patched_createNode(flow,config) {
 
