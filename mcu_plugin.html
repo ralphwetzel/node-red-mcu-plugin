@@ -31,6 +31,46 @@
         min-width: 140px;
     }
 
+    .mcu-build-button {
+        height: 33px;
+        line-height: 20px;
+        font-size: 14px;
+        background: rgb(7, 48, 112);
+        color: white !important;
+        box-sizing: border-box;
+        display: inline-block;
+        border: 1px solid var(--red-ui-form-input-border-color);
+        text-align: center;
+        margin:0;
+        cursor:pointer;
+    }
+
+    .mcu-build-button :focus {
+        outline: none;
+    }
+
+    .mcu-build-button-button {
+        border-right: none;
+        padding-right: 12px;
+        padding-left: 12px;
+    }
+
+    .mcu-build-button-select {
+        line-height: 32px;
+        vertical-align: middle;
+        padding: 0px 8px;
+        border-left: none;
+    }
+
+    .mcu-build-button-select:focus {
+        outline: none;
+    }
+
+    .attention {
+        border-color: transparent;
+        outline: solid rgb(7, 48, 112) 2px;
+    }
+
 </style>
 
 <script type="text/javascript" src="resources/@ralphwetzel/node-red-mcu-plugin/lib/flashTab.js"></script>
@@ -399,7 +439,11 @@
             // If the textarea is initially scrolled to its bottom position...
             var at_the_bottom = (mcuc[0].scrollHeight - mcuc.scrollTop() - mcuc[0].clientHeight < 8);
 
-            msg = msg.trim();
+            try {
+                msg = msg.trim();
+            } catch (err) {
+                return;
+            }
 
             // var msgs = d[key];
             if (msg.length > 0) {
@@ -972,17 +1016,86 @@
 
                 let row3 = $('<div>').css({ "margin-top": "4px" }).appendTo(inputRows);
 
-                let bb = $("<button>").addClass("ui-button ui-corner-all ui-widget").appendTo(row3);
-                // bb.html('<i class="fa fa-cog" aria-hidden="true"></i><span>  Build</span>');
-                bb.css({background:"rgb(7, 48, 112)", color: "white"});
-                bb.button({
-                    label: '<i class="fa fa-cog" aria-hidden="true"></i><span>  Build</span>'
+
+                let bb = $('<span class="button-group">').appendTo(row3);
+
+                let bbb = $('<a id="mcu-plugin-build" href="#">').appendTo(bb);
+                bbb.button({
+                    label: '<i class="fa fa-cog" style="margin-right: 10px"></i><span>Build</span>'
                 });
+                bbb.css({
+                    background:"rgb(7, 48, 112)",
+                    color: "white",
+                    border: "none",
+                    "margin-right": "0px",
+                    "line-height": "25px"
+                }).on("click", function() {
+                    launch_build();
+                })
 
-                bb.on("click", function() {
-                    bb.find("i").addClass("fa-spin");
+                let bbd = $('<a id="mcu-plugin-build-select" href="#">').appendTo(bb);
+                bbd.button({
+                    label: '<i class="fa fa-caret-down"></i>'
+                });
+                bbd.css({
+                    background:"rgb(7, 48, 112)", 
+                    color: "white",
+                    border: "none",
+                    "line-height": "25px",
+                    padding: "0.4em 0.6em"
+                })
 
-                    self = this;
+                bbd.on("click", function (e) {
+
+                    e.preventDefault();
+
+                    let options = [
+                        {
+                            label: $(`<span>Reconnect to xsbug...</span>`),
+                            disabled: RED.nodes.dirty(),
+                            onselect: function () {
+                                launch_build("reconnect");
+                            }
+                        }
+                    ]
+                    let menu = RED.popover.menu({
+                        options: options,
+                    });
+
+                    // Patch away the <a> anchor of disabled menu items
+                    // Att: This doesn't work with <string> labels
+                    for (let i = 0; i < options.length; i++) {
+                        let o = options[i];
+                        if (o.disabled === true && typeof (o.label) !== "string") {
+                            let link = o.label.parent();
+
+                            // remove the <a> tag
+                            o.label.appendTo(link.parent());
+                            link.remove();
+
+                            // make it look nice
+                            o.label.css({
+                                "display": "block",
+                                "padding": "4px 8px 4px 16px",
+                                "line-height": "20px",
+                                "color": "silver"
+                            })
+
+                        }
+                    }
+
+                    menu.show({
+                        target: bbd,
+                        align: "left",
+                        offset: [bbd.outerWidth() - 2, -1]
+                    })
+
+                })
+
+                function launch_build(mode) {
+
+                    mode ??= "build";
+                    let spin_timer;
 
                     function build(data) {
 
@@ -1008,25 +1121,45 @@
                             }
                         }
 
+                        if (spin_timer) {
+                            clearTimeout(spin_timer);
+                            spin_timer = undefined;
+                        }
+
+                        flashTab("__console__", "attention", 1000);
+                        bbb.find("i").addClass("fa-spin");
+                        spin_timer = setTimeout(function() {
+                            bbb.find("i").removeClass("fa-spin");
+                        }, 5000);
+
                         $.ajax({
                             url: "mcu/build",
                             contentType: "application/json",
                             type: "POST",
                             data: JSON.stringify({
+                                "mode": mode,
                                 "options": options
                             }),
                             success: function (resp) {
                                 // buildButton.toggleClass("disabled",!debuggerEnabled);
                                 // console.log("success");
-                                bb.find("i").removeClass("fa-spin");
+                                // bbb.find("i").removeClass("fa-spin");
+                                if (spin_timer) {
+                                    clearTimeout(spin_timer);
+                                    spin_timer = undefined;
+                                    bbb.find("i").removeClass("fa-spin");
+                                }
                             },
                             error: function (jqXHR, textStatus, errorThrown) {
                                 // console.log(jqXHR,textStatus,errorThrown);
-                                bb.find("i").removeClass("fa-spin");
                                 flashTab("__console__");
+                                if (spin_timer) {
+                                    clearTimeout(spin_timer);
+                                    spin_timer = undefined;
+                                    bbb.find("i").removeClass("fa-spin");
+                                }
                             }
                         });
-
                     }
 
                     if (RED.nodes.dirty() === true) {
@@ -1049,12 +1182,12 @@
                                     click: function (e) {
                                         notify_deploy.close();
                                         $('#red-ui-header-button-deploy').trigger("click");
-                                        let builder = function() {
+                                        let builder = function () {
                                             RED.events.off("deploy", builder);
                                             build(data);
                                         }
                                         RED.events.on("deploy", builder);
-                                        setTimeout(function() {
+                                        setTimeout(function () {
                                             RED.events.off("deploy", builder);
                                         }, 1000);
                                     }
@@ -1072,12 +1205,12 @@
                     } else {
                         build(data);
                     }
-                })
+
+                }
 
                 RED.events.on("runtime-state", function(msg) {
-                    if (bb) {
-                        bb.button( "option", "disabled", msg.state === "stop" );
-                    }                        
+                    bbb?.button( "option", "disabled", msg.state === "stop" );
+                    bbd?.button( "option", "disabled", msg.state === "stop" );
                 });
 
                 // let b = $('<input type="checkbox"/>').css({ "margin-left": "20px" }).appendTo(row3)

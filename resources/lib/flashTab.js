@@ -22,12 +22,20 @@
 let flashingTab;
 let flashingTabTimer;
 
-function flashTab(tabId) {
+function flashTab(tabId, className, duration) {
+
+    className ??= "highlighted";
+    duration ??= 2200;
+
     if(flashingTab && flashingTab.length) {
         //cancel current flashing node before flashing new node
         clearInterval(flashingTabTimer);
         flashingTabTimer = null;
-        flashingTab.removeClass('highlighted');
+
+        let fc = flashingTab.data("flashClass");
+        fc ??= className;   // wild guess!
+
+        flashingTab.removeClass(fc);
         flashingTab = null;
     }
     let tab = $("#red-ui-tab-" + tabId);
@@ -35,15 +43,18 @@ function flashTab(tabId) {
 
     flashingTabTimer = setInterval(function(flashEndTime) {
         if (flashEndTime >= Date.now()) {
-            const highlighted = tab.hasClass("highlighted");
-            tab.toggleClass('highlighted', !highlighted)
+            const highlighted = tab.hasClass(className);
+            tab.toggleClass(className, !highlighted)
         } else {
             clearInterval(flashingTabTimer);
             flashingTabTimer = null;
             flashingTab = null;
-            tab.removeClass('highlighted');
+            tab.removeClass(className);
         }
-    }, 100, Date.now() + 2200);
+    }, 100, Date.now() + duration);
+    
     flashingTab = tab;
-    tab.addClass('highlighted');
+    
+    tab.data("flashClass", className);
+    tab.addClass(className);
 }

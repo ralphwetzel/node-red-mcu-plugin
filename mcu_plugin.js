@@ -1380,6 +1380,11 @@ module.exports = function(RED) {
                     return;
                 }
 
+                let mode = req.body.mode;
+                if (mode === "reconnect") {
+                    build_options.buildtarget = "xsbug";
+                }
+
                 // *** Is this a valid assumption?
                 if (!build_options.make) {
                     build_options.make = true;
