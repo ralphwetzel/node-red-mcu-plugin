@@ -187,6 +187,11 @@ Please refer to the [Node-RED documentation](https://nodered.org/docs/user-guide
 There's a dedicated folder for each of the build configurations you have defined in the Node-RED editor.
 This folder - currently - is being emptied prio to each build run. 
 
+### Junction nodes
+Junction nodes are a brilliant feature of the Node-RED editor to support the creation of cleary structured flows.
+In essence, they yet are just visual sugar to please the operators eye. In runtime conditions, they still demand resources like any other node does.
+As we consider resources as always rare - which is especially true for any MCU - this plugin thus replaces all junction nodes by direct connections between two active nodes. It as well removes circular references in the junction node chain - in case they exists.
+
 ### manifest.json
 The [documentation of Moddable SDK](https://github.com/Moddable-OpenSource/moddable/blob/public/documentation/tools/manifest.md#manifest) states that
 
