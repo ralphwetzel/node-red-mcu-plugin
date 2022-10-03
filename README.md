@@ -30,6 +30,7 @@ You may follow the build process on the tab `Console Monitor`.
 - [ ] `manifest.json` [library](#manifestjson) - providing pre-defined build parameters for (node modules and) npm packages
 - [x] Build flows when running Node-RED as service on Raspberry Pi.
 - [x] Include relevant config nodes in the MCU build.
+- [x] Junction node resolving
 
 ## Test Case
 We're able to run this (currently minimalistic) flow @ the MCU simulator and display it's feedback into the Node-RED editor.
@@ -187,10 +188,16 @@ Please refer to the [Node-RED documentation](https://nodered.org/docs/user-guide
 There's a dedicated folder for each of the build configurations you have defined in the Node-RED editor.
 This folder - currently - is being emptied prio to each build run. 
 
-### Junction nodes
+### Junction node resolving
 Junction nodes are a brilliant feature of the Node-RED editor to support the creation of cleary structured flows.
 In essence, they yet are just visual sugar to please the operators eye. In runtime conditions, they still demand resources like any other node does.
-As we consider resources as always rare - which is especially true for any MCU - this plugin thus replaces all junction nodes by direct connections between two active nodes. It as well removes circular references in the junction node chain - in case they exists.
+As we consider resources as always rare - which is especially true for any MCU - this plugin thus replaces all junction nodes by direct connections between two active nodes. It as well removes circular references in the junction node chain - if they exists.
+
+To test this feature, you may start with the [displayed flow](https://github.com/ralphwetzel/node-red-mcu-plugin/tree/main/test/junction_resolver_test.json):
+
+<img alt="junction_resolver_test_flow" src="resources/junctiontest.png"
+    style="min-width: 474px; width: 474px; align: center; border: 1px solid lightgray;"/>
+
 
 ### manifest.json
 The [documentation of Moddable SDK](https://github.com/Moddable-OpenSource/moddable/blob/public/documentation/tools/manifest.md#manifest) states that

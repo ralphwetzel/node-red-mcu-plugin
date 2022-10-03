@@ -1,0 +1,202 @@
+[
+    {
+        "id": "45f8a43013ccf006",
+        "type": "tab",
+        "label": "Junction Test",
+        "disabled": false,
+        "info": "",
+        "env": [],
+        "_mcu": {
+            "mcu": true
+        }
+    },
+    {
+        "id": "44806d18878baea6",
+        "type": "junction",
+        "z": "45f8a43013ccf006",
+        "x": 640,
+        "y": 280,
+        "wires": [
+            [
+                "e5b569fddd3383bf"
+            ]
+        ]
+    },
+    {
+        "id": "36a73cf7c69cc380",
+        "type": "junction",
+        "z": "45f8a43013ccf006",
+        "x": 640,
+        "y": 440,
+        "wires": [
+            [
+                "4288baa6ec0a85cc"
+            ]
+        ]
+    },
+    {
+        "id": "4288baa6ec0a85cc",
+        "type": "junction",
+        "z": "45f8a43013ccf006",
+        "x": 580,
+        "y": 360,
+        "wires": [
+            [
+                "e5b569fddd3383bf"
+            ]
+        ]
+    },
+    {
+        "id": "e5b569fddd3383bf",
+        "type": "junction",
+        "z": "45f8a43013ccf006",
+        "x": 720,
+        "y": 360,
+        "wires": [
+            [
+                "d68f7841c4887aee",
+                "49c9264aa5ecda08",
+                "36a73cf7c69cc380"
+            ]
+        ]
+    },
+    {
+        "id": "2998720adfc32082",
+        "type": "junction",
+        "z": "45f8a43013ccf006",
+        "x": 720,
+        "y": 200,
+        "wires": [
+            [
+                "d68f7841c4887aee",
+                "8fe0697525551151"
+            ]
+        ]
+    },
+    {
+        "id": "8fe0697525551151",
+        "type": "debug",
+        "z": "45f8a43013ccf006",
+        "name": "3",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "_mcu": {
+            "mcu": true
+        },
+        "x": 850,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "d68f7841c4887aee",
+        "type": "debug",
+        "z": "45f8a43013ccf006",
+        "name": "4",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "_mcu": {
+            "mcu": true
+        },
+        "x": 850,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "49c9264aa5ecda08",
+        "type": "debug",
+        "z": "45f8a43013ccf006",
+        "name": "5",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "_mcu": {
+            "mcu": true
+        },
+        "x": 850,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "3d480bbb10567fc0",
+        "type": "inject",
+        "z": "45f8a43013ccf006",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1",
+        "payloadType": "str",
+        "_mcu": {
+            "mcu": true
+        },
+        "x": 470,
+        "y": 200,
+        "wires": [
+            [
+                "44806d18878baea6",
+                "2998720adfc32082"
+            ]
+        ]
+    },
+    {
+        "id": "d76b363eae7f9d79",
+        "type": "inject",
+        "z": "45f8a43013ccf006",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "2",
+        "payloadType": "str",
+        "_mcu": {
+            "mcu": true
+        },
+        "x": 470,
+        "y": 360,
+        "wires": [
+            [
+                "4288baa6ec0a85cc",
+                "44806d18878baea6"
+            ]
+        ]
+    }
+]
