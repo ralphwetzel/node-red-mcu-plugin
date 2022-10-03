@@ -190,7 +190,7 @@ This folder - currently - is being emptied prio to each build run.
 
 ### Junction node resolving
 Junction nodes are a brilliant feature of the Node-RED editor to support the creation of cleary structured flows.
-In essence, they yet are just visual sugar to please the operators eye. In runtime conditions, they still demand resources like any other node does.
+In essence, they yet are just visual sugar to please the operator's eye. In runtime conditions, they still demand resources like any other node does.
 As we consider resources as always rare - which is especially true for any MCU - this plugin thus replaces all junction nodes by direct connections between two active nodes. It as well removes circular references in the junction node chain - if they exists.
 
 To test this feature, you may start with the [displayed flow](https://github.com/ralphwetzel/node-red-mcu-plugin/tree/main/test/junction_resolver_test.json):
