@@ -592,7 +592,7 @@
         $(window).on("focus", resize_panels);
 
         // the flows treeList
-        flowSelector = $("<div>").css({ width: "100%", height: "inherit" }).appendTo(selectorPanel);
+        flowSelector = $("<div>").css({ width: "100%", height: "calc(100% - 37px" }).appendTo(selectorPanel);
         flowSelector.treeList({
             // data:getFlowData(),
             data: flowData,
