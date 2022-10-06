@@ -14,6 +14,9 @@ const mcuManifest = require("./lib/manifest.js");
 
 // const {getPersistentShell} = require('./lib/persistent-shell');
 
+// https://github.com/stefanpenner/resolve-package-path
+const resolve_package_path = require('resolve-package-path')
+
 let flows2build = [];
 let proxy;
 
@@ -959,6 +962,14 @@ module.exports = function(RED) {
             }
         }
 
+        // resolve core nodes directory => "@node-red/nodes"
+        for (let i=0; i<manifest.resolver_paths.length; i+=1) {
+            let pp = resolve_package_path("@node-red/nodes", manifest.resolver_paths[i]);
+            if (pp) {
+                manifest.add_build("REDNODES", path.dirname(pp));
+            }
+        }
+
         nodes.forEach(function(n) {
 
             // verify that a manifest is available, create stubs for missing ones
@@ -969,8 +980,22 @@ module.exports = function(RED) {
             if (!module) return;
 
             if (module === "node-red") {
-                console.log(`Type "${n.type}" = core node: No manifest added.`);
-                return;
+
+                switch(n.type) {
+                    case "trigger":
+                        // let module = "@node-red/nodes/core/function/trigger";       // predefined template
+                        // let mp = manifest.from_template(module, dest)
+                        // if (mp && typeof(mp) === "string") {
+                        //     manifest.include_manifest(mp);
+                        // }
+                        // return;
+                        manifest.include_manifest("$(MCUROOT)/nodes/trigger/manifest.json")
+
+                    default:
+                        console.log(`Type "${n.type}" = core node: No manifest added.`);
+                        return; 
+                    
+                }
             }
 
             if (manifest.resolver_paths.indexOf(node.path) < 0) {
@@ -982,7 +1007,7 @@ module.exports = function(RED) {
                 manifest.include_manifest(p);
                 return;
             }
-            p = manifest.create_manifests_for_module(module, dest)
+            p = manifest.create_manifests_for_module(module, dest, n.type)
             if (p && typeof(p) === "string") {
                 manifest.include_manifest(p);
                 mainjs.push(`import "${module}"`);
