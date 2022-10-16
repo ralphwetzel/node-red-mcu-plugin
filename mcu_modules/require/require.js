@@ -1,28 +1,14 @@
 import Modules from "modules";
 
-// function generateMyId() @ "xs_nodered_util_generateId_X";
+function require(module) {
 
-// eslint-disable-next-line
-function importNow() @ "rdw_mcu_importNow";
+    let req = Modules.importNow(module);
 
-async function require(module) {
+    if (req?.default)
+        return req.default;
 
-    // trace("@generateMyId: ", generateMyId(), "\n");
+    return req;
 
-    trace("@require: ", module, "\n");
-    trace("@require: has?", Modules.has(module), "\n");
-    debugger;
-
-    try {
-        // const mod = Modules.importNow(module);
-        const mod = importNow(module);
-        trace("@require -> after await: ", module, "\n");
-        return mod;
-     }
-    catch (err) {
-        trace("@require: ", err, "\n");
-        return;
-    }
 }
 
-globalThis.require = importNow;
+globalThis.require = require;
