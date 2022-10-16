@@ -580,7 +580,7 @@ module.exports = function(RED) {
                         RED.log.info("Please raise an issue @ our GitHub repository, stating the following information:");
                         opener = false;
                     }
-                    RED.log.info("> New platform:", p);
+                    RED.log.info(`> New platform: ${p}`);
                 }
             }
         }
