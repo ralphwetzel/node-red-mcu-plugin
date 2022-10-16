@@ -972,6 +972,11 @@ module.exports = function(RED) {
 
         nodes.forEach(function(n) {
 
+            // clean the config from the _mcu flag
+            if (n._mcu) {
+                delete n._mcu;
+            }
+
             // verify that a manifest is available, create stubs for missing ones
             let node = library.get_node(n.type);
             if (!node) return;
