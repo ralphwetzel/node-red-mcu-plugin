@@ -1,0 +1,15 @@
+{
+    "//": {
+      "***": "https://github.com/ralphwetzel/node-red-mcu-plugin",
+      "npm": "semaphore",
+      "xs": "manifest.json",
+      "@": "2022-10-16T17:27:14.822Z",
+      "ref": "https://github.com/Moddable-OpenSource/moddable"
+    },
+    "build": {},
+    "include": [],
+    "modules": {
+      "*": [],
+      "semaphore": "./semaphore"
+    }
+  }
