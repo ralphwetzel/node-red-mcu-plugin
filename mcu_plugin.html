@@ -616,7 +616,7 @@
                 if (typeof(ws._mcu) !== "object") {
                     delete ws._mcu;
                 }
-                ws._mcu ??= { "mcu": false };
+                ws._mcu = ws._mcu || { "mcu": false };
 
                 // c === 3: node has flag but need none; remove it
                 // c === 2: node got mcu flag

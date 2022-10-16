@@ -24,8 +24,8 @@ let flashingTabTimer;
 
 function flashTab(tabId, className, duration) {
 
-    className ??= "highlighted";
-    duration ??= 2200;
+    className = className || "highlighted";
+    duration = duration || 2200;
 
     if(flashingTab && flashingTab.length) {
         //cancel current flashing node before flashing new node
@@ -33,7 +33,7 @@ function flashTab(tabId, className, duration) {
         flashingTabTimer = null;
 
         let fc = flashingTab.data("flashClass");
-        fc ??= className;   // wild guess!
+        fc = fc || className;   // wild guess!
 
         flashingTab.removeClass(fc);
         flashingTab = null;
