@@ -553,9 +553,17 @@ module.exports = function(RED) {
             'gecko/thunderboard2',
             'pico/captouch',
             'pico/ili9341',
+            'pico/itsybitsy',
+            'pico/lilygo_t_display',
             'pico/pico_display',
             'pico/pico_display_2',
             'pico/pico_lcd_1.3',
+            'pico/pico_w',
+            'pico/picosystem',
+            'pico/pro_micro',
+            'pico/qtpy',
+            'pico/tiny2040',
+            'pico/xiao_rp2040',
             'qca4020/cdb'
         ]
 
