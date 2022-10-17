@@ -1166,7 +1166,8 @@ module.exports = function(RED) {
             "HOME": process.env.HOME,
             "SHELL": process.env.SHELL,
             "PATH": process.env.PATH,
-            "MODDABLE": MODDABLE
+            "MODDABLE": MODDABLE,
+            "BUILD": path.resolve(MODDABLE, "build")
         }
 
         let platform = options.platform.split("/");
@@ -1194,7 +1195,11 @@ module.exports = function(RED) {
             case "pico":
             case "gecko":
             case "qca4020":
-                    publish_stderr(`System setup support currently not implemented for platform ${options.platform}.`);
+                    // publish_stderr(`System setup support currently not implemented for platform ${options.platform}.`);
+                    env.PLATFORM = pid;
+                    if (platform[1]?.length > 0)
+                        env.SUBPLATFORM = platform[1]
+                    break;
             case "sim":
                 break;
             default:
