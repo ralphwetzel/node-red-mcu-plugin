@@ -40,7 +40,7 @@ We're able to run this (currently minimalistic) flow @ the MCU simulator and dis
     style="min-width: 474px; width: 474px; align: center; border: 1px solid lightgray;"/>
 
 
-```
+``` json
 [
     {
         "id": "18785fa6f5606659",
@@ -118,10 +118,13 @@ We're able to run this (currently minimalistic) flow @ the MCU simulator and dis
 
 ## Installation
 
-```
+``` bash
 cd <userDir>
 npm install https://github.com/ralphwetzel/node-red-mcu-plugin
 ```
+
+> This installs as well [node-red-mcu](https://github.com/phoddie/node-red-mcu).
+
 Please refer to the [Node-RED documentation](https://nodered.org/docs/user-guide/runtime/configuration) for details regarding `<userDir>`.
 
 ### Raspberry Pi: Additional preparation steps 
