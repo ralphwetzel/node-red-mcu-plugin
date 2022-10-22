@@ -719,6 +719,7 @@
 
         let console_container;
         let config_container;
+        let config_scroll_top;
 
         tabs = RED.tabs.create({
             id: "tabs-tabs",
@@ -745,7 +746,13 @@
                 if (config_container) {
                     if (tab.id != "__console__") {
                         config_container.show();
+                        if (config_view) {
+                            setTimeout(() => {
+                                config_view.parent().scrollTop(config_scroll_top);
+                            }, 0);
+                        }
                     } else {
+                        config_scroll_top = config_view?.parent()?.scrollTop() ?? 0;
                         config_container.hide();
                     }
                 }
