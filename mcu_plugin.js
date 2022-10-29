@@ -1195,6 +1195,25 @@ module.exports = function(RED) {
                 ]);
                 break;
             case "pico":
+
+                switch (os.platform()) {
+                    case "darwin":
+                        switch (os.arch()) {
+                            case "x64":
+                                env.PICO_GCC_ROOT = ensure_env_path("PICO_GCC_ROOT", [ `/usr/local` ]);
+                                break;
+                            case "arm64":
+                                env.PICO_GCC_ROOT = ensure_env_path("PICO_GCC_ROOT", [ `/opt/homebrew` ]);
+                                break;
+                        }
+                        break;
+                    case "linux":
+                        env.PICO_GCC_ROOT = ensure_env_path("PICO_GCC_ROOT", [ `/usr` ]);
+                        break;
+                }
+
+                env.PICO_SDK_DIR = ensure_env_path("PICO_SDK_DIR", [`${HOME}/pico/pico-sdk`]);
+
             case "gecko":
             case "qca4020":
                     // publish_stderr(`System setup support currently not implemented for platform ${options.platform}.`);
