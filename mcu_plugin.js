@@ -145,12 +145,12 @@ function patched_copyObjectProperties(src,dst,copyList,blockList) {
 
     if (!runtime_nodes && copyList.indexOf("createNode") >=0 && copyList.indexOf("getNode") >=0) {
         runtime_nodes = src;
-        console.log(runtime_nodes);
+        // console.log(runtime_nodes);
     }
 
     return orig_copyObjectProperties(src,dst,copyList,blockList);
 }
-registryUtil.copyObjectProperties = patched_copyObjectProperties;
+// registryUtil.copyObjectProperties = patched_copyObjectProperties;
 
 //
 // *****
@@ -158,7 +158,7 @@ registryUtil.copyObjectProperties = patched_copyObjectProperties;
 
 module.exports = function(RED) {
 
-    console.log(process.env);
+    // console.log(process.env);
 
     // *****
     // env variable settings: Ensure ...
@@ -280,7 +280,7 @@ module.exports = function(RED) {
 
     function mcu_debug(config) {
         RED.nodes.createNode(this, config);
-        console.log(config);
+        // console.log(config);
 
         let node = this;
         node.on('input', function(msg, send, done) {
@@ -353,7 +353,7 @@ module.exports = function(RED) {
             console.log("@mcu");
             if (config.type) {
                 let t = library.get_mcumode_type(config.type)
-                console.log(t);
+                // console.log(t);
                 if (t) {
                     config.type = t;
                     console.log("replacing " + config.id + " w/ " + t)
