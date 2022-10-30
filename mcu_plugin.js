@@ -1122,6 +1122,16 @@ module.exports = function(RED) {
         // run IDF exports.sh
         // run mcconfig
 
+        /**
+         *
+         * @param {string} name - name of the environment variable
+         * @param {(string | object)[]} path_options - alternative paths to be checked
+         * @param {string} path_options[].test - file / directory path to check for existance 
+         * @param {string} path_options[].value - value to be assigned to environment variable if test is successful 
+         * @returns {string} path that is verified to exist
+         *
+         */
+
         function ensure_env_path(name, path_options) {
 
             let n = process.env[name];
@@ -1138,14 +1148,34 @@ module.exports = function(RED) {
 
             // Try to find path for $name
             for (let i = 0; i < path_options.length; i += 1) {
-                if (fs.existsSync(path_options[i])) {
-                    n = path_options[i];
+                let po = path_options[i];
+                let test;
+                let value;
+                if (typeof po === "object") {
+                    test = po.test ?? po.value ?? undefined;
+                    value = po.value ?? test ?? undefined;
+                } else {
+                    test = value = po;
+                }
+                if (test && value && fs.existsSync(test)) {
+                    n = value;
                     break;
                 }
             }
             
             if (!n) {
                 throw(`$${name} is not defined.`)
+            }
+
+            // path_options can declare as well a file to be checked for existance
+            // to be more precise in defining what we expect as "fingerprint" of the env variable setting 
+            let stat;
+            try {
+                stat = fs.statSync(n);
+            } catch {}
+
+            if (stat?.isFile()) {
+                n = path.dirname(n);
             }
 
             publish_stdout(`$${name} identified: ${n}`);
@@ -1174,6 +1204,10 @@ module.exports = function(RED) {
 
         let platform = options.platform.split("/");
         
+        env.PLATFORM = platform[0];
+        if (platform[1]?.length > 0)
+            env.SUBPLATFORM = platform[1]
+
         const HOME = process.env.HOME ?? "";
         if (HOME.length < 1) {
             throw(`$HOME is not defined.`)
@@ -1188,38 +1222,40 @@ module.exports = function(RED) {
                     `${HOME}/.local/share/esp`
                 ]);
                 break;
+
             case "esp32":
                 env.IDF_PATH = ensure_env_path("IDF_PATH", [
                     `${HOME}/esp32/esp-idf`,
                     `${HOME}/.local/share/esp32/esp-idf`
                 ]);
                 break;
-            case "pico":
 
+            case "pico":
                 switch (os.platform()) {
                     case "darwin":
                         switch (os.arch()) {
                             case "x64":
-                                env.PICO_GCC_ROOT = ensure_env_path("PICO_GCC_ROOT", [ `/usr/local` ]);
+                                env.PICO_GCC_ROOT = ensure_env_path("PICO_GCC_ROOT", [ {test: "/usr/local/bin/arm-none-eabi-gcc", value: `/usr/local`} ]);
                                 break;
                             case "arm64":
-                                env.PICO_GCC_ROOT = ensure_env_path("PICO_GCC_ROOT", [ `/opt/homebrew` ]);
+                                env.PICO_GCC_ROOT = ensure_env_path("PICO_GCC_ROOT", [ {test: "/opt/homebrew/bin/arm-none-eabi-gcc", value: `/opt/homebrew`} ]);
                                 break;
                         }
                         break;
                     case "linux":
-                        env.PICO_GCC_ROOT = ensure_env_path("PICO_GCC_ROOT", [ `/usr` ]);
+                        env.PICO_GCC_ROOT = ensure_env_path("PICO_GCC_ROOT", [ {test: "/usr/bin/arm-none-eabi-gcc", value: "/usr"} ]);
                         break;
                 }
 
                 env.PICO_SDK_DIR = ensure_env_path("PICO_SDK_DIR", [`${HOME}/pico/pico-sdk`]);
+                break;
 
             case "gecko":
             case "qca4020":
                     // publish_stderr(`System setup support currently not implemented for platform ${options.platform}.`);
-                    env.PLATFORM = pid;
-                    if (platform[1]?.length > 0)
-                        env.SUBPLATFORM = platform[1]
+                    // env.PLATFORM = pid;
+                    // if (platform[1]?.length > 0)
+                    //     env.SUBPLATFORM = platform[1]
                     break;
             case "sim":
                 break;
