@@ -1572,7 +1572,7 @@ module.exports = function(RED) {
 
                         proxy = new mcuProxy.proxy();
 
-                        proxy.on("status", (data) => {
+                        proxy.on("status", (data, id) => {
 
                             /* {
                                 text: 1658087621772,
@@ -1589,12 +1589,14 @@ module.exports = function(RED) {
                             if (shape) { status["shape"] = shape;}
                             if (text) { status["text"] = text;}
                 
-                            if (data.source && data.source.id) {
-                                console.log("Emitting to " + data.source.id);
+                            id = id ?? data?.source?.id
+
+                            if (id) {
+                                console.log("Emitting to " + id);
                                 RED.events.emit("node-status",{
-                                    "id": data.source.id,
+                                    "id": id,
                                     "status": status
-                                });    
+                                });
                             }
                 
                             console.log("Status:", status);
@@ -1637,7 +1639,7 @@ module.exports = function(RED) {
 
                 proxy = new mcuProxy.proxy();
 
-                proxy.on("status", (data) => {
+                proxy.on("status", (data, id) => {
 
                     /* {
                         text: 1658087621772,
@@ -1656,10 +1658,12 @@ module.exports = function(RED) {
                     if (shape) { status["shape"] = shape;}
                     if (text) { status["text"] = text;}
         
-                    if (data.source && data.source.id) {
-                        console.log("Emitting to " + data.source.id);
+                    id = id ?? data?.source?.id
+
+                    if (id) {
+                        console.log("Emitting to " + id);
                         RED.events.emit("node-status",{
-                            "id": data.source.id,
+                            "id": id,
                             "status": status
                         });    
                     }
@@ -1667,10 +1671,11 @@ module.exports = function(RED) {
                     // console.log("Status:", status);
                 })
 
-                proxy.on("input", (data) => {
-                    if (data.source && data.source.id) {
+                proxy.on("input", (data, id) => {
 
-                        let id = data.source.id;
+                    id = id ?? data?.source?.id
+
+                    if (id) {
                         let node = RED.nodes.getNode(id);
                         if (node) {
                             delete data.source;
@@ -1679,11 +1684,12 @@ module.exports = function(RED) {
                     }
                 })
 
-                proxy.on("error", (data) => {
-                    console.log(data);
-                    if (data.source?.id) {
+                proxy.on("error", (data, id) => {
 
-                        let id = data.source.id;
+                    id = id ?? data?.source?.id
+
+                    console.log(data);
+                    if (id) {
                         let node = RED.nodes.getNode(id);
                         if (node) {
                             console.log(data.error);
@@ -1694,11 +1700,13 @@ module.exports = function(RED) {
                     }
                 })
 
-                proxy.on("warn", (data) => {
-                    console.log(data);
-                    if (data.source?.id) {
+                proxy.on("warn", (data, id) => {
 
-                        let id = data.source.id;
+                    id = id ?? data?.source?.id
+
+                    console.log(data);
+                    if (id) {
+
                         let node = RED.nodes.getNode(id);
                         if (node) {
                             console.log(data.warn);
