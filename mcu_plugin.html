@@ -931,7 +931,7 @@
                     }
 
                     if (value == "sim") {
-                        row2.hide();
+                        row2.hide(500);
 
                         if (instrumentation) {
                             let _instr = instrumentation.typedInput("value");
@@ -942,8 +942,10 @@
                             }
                         }
 
+                    } else if (value == "pico") {
+                        row2.hide(500);
                     } else {
-                        row2.show();
+                        row2.show(500);
                     }
 
                 });
