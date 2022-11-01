@@ -603,7 +603,7 @@ module.exports = function(RED) {
                 RED.log.info("Please raise an issue @ our GitHub repository, stating the following information:");
                 opener = false;
             }
-            RED.log.info("> Verify platform:", platforms_verified[i]);
+            RED.log.info(`> Verify platform: ${platforms_verified[i]}`);
             platform_identifiers.splice(platform_identifiers.indexOf(platforms_verified[i]), 1);
         }
         // console.log(platform_identifiers);
