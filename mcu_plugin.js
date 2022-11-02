@@ -1295,9 +1295,18 @@ module.exports = function(RED) {
             cmd += " -t " + options.buildtarget;
         }
 
-        if (options.arguments) {
+        {
+            let args = {};
+            if (options.arguments) {
+                args = JSON.parse(options.arguments);
+            }
+            if (options.ssid) {
+                args['ssid'] = options.ssid;
+            }
+            if (options.password) {
+                args['password'] = options.password;
+            }
 
-            let args = JSON.parse(options.arguments)
             for (key in args) {
                 cmd += " " + key + '="' + args[key] + '"'
             }

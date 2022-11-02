@@ -252,13 +252,21 @@
         platform: "sim/moddable_one",
         port: "",
         more: false,
-        pixel: "rgb565le",
         buildtarget: "all",
-        rotation: "0",
         debug: true,
         release: false,
         arguments: "{}",
         creation: "{}",
+        ssid: "",
+        password: "",
+        ui: false,
+        pixel: "rgb565le",
+        rotation: "0",
+        cll: 8192,  // CommandListLength
+        dll: 8192,  // DisplayListLength
+        tc: 1,      // TouchCount
+        px: 120,    // Pixel X
+        py: 16      // Pixel Y
     }
 
     function addConfig() {
@@ -840,6 +848,10 @@
                     }
                 }
 
+                container.parent().css({
+                    "border-bottom": "1px solid rgb(7, 48, 112)"
+                });
+
                 // Patch onclick of the item-remove-button
                 // original @ editableList.js / 307
                 container.parent().find("a.red-ui-editableList-item-remove").unbind("click").on("click", function (evt) {
@@ -1347,31 +1359,6 @@
 
                 let row4 = $('<div>').css({ "margin-top": "4px" }).appendTo(inputRows).hide();
 
-                $('<div class="mcu-build-option-label">').text("Screen Pixel Format:").appendTo(row4);
-                let pixel = $('<input>').appendTo(row4)
-                pixel.typedInput({
-                    type: "pixel",
-                    types: [{
-                        value: "pixel",
-                        options: [
-                            { value: "gray16" },
-                            { value: "gray256" },
-                            { value: "rgb332" },
-                            { value: "rgb565be" },
-                            { value: "rgb565le" },
-                            // { value: "qca4020", label: "QCA4020 | Qualcomm"},
-                        ],
-                    }],
-                }).on('change', function (event, type, value) {
-                    if (initializing === false) {
-                        data.pixel = value;
-                        persist_config();
-                    }
-                })
-                pixel.next().css({ "width": "auto" });
-
-                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
-
                 $('<div class="mcu-build-option-label">').text("Build Target:").appendTo(row4);
                 let buildtarget = $('<input>').appendTo(row4)
                 buildtarget.typedInput({
@@ -1393,31 +1380,6 @@
                     }
                 })
                 buildtarget.next().css({ "width": "auto" });
-
-                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
-
-                $('<div class="mcu-build-option-label">').text("Screen Rotation:").appendTo(row4);
-                let rotation = $('<input>').appendTo(row4)
-                rotation.typedInput({
-                    type: "rotation",
-                    types: [{
-                        value: "rotation",
-                        options: [
-                            { value: "0", label: "0°" },
-                            { value: "90", label: "90°" },
-                            { value: "180", label: "180°" },
-                            { value: "270", label: "270°" },
-                            // { value: "rgb565le"},
-                            // { value: "qca4020", label: "QCA4020 | Qualcomm"},
-                        ],
-                    }],
-                }).on('change', function (event, type, value) {
-                    if (initializing === false) {
-                        data.rotation = value;
-                        persist_config();
-                    }
-                })
-                rotation.next().css({ "width": "auto" });
 
                 $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
 
@@ -1487,6 +1449,202 @@
                 creation.next().css({ "width": "auto" });
                 $("<span/>").text("=> XS Machine Allocation").css({ "margin-left": "20px", "font-size": "x-small" }).appendTo(row4);
 
+                $("<hr>").appendTo(row4);
+
+                $('<div class="mcu-build-option-label">').text("WiFi | SSID:").appendTo(row4);
+                let ssid = $('<input>').appendTo(row4)
+                // str: {value:"str",label:"string",icon:"red/images/typedInput/az.svg"},
+                ssid.typedInput({
+                    type: "ssid",
+                    types: [{
+                        value: "ssid",
+                        label: "string",
+                        icon: "fa fa-wifi"
+                    }],
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+                        data.ssid = value;
+                        persist_config();
+                    }
+                })
+                ssid.next().css({ "width": "250px" });
+                ssid.next().find(".red-ui-typedInput-type-label").css({ "padding-left": "0px" });
+                ssid.next().find(".red-ui-typedInput-icon").css({ "width": "18px" });
+
+                
+                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
+
+                $('<div class="mcu-build-option-label">').text("WiFi | Password:").appendTo(row4);
+                let passwd = $('<input>').appendTo(row4)
+                passwd.typedInput({
+                    type: "cred",
+                    icon: "fa fa-wifi",
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+                        data.password = value;
+                        persist_config();
+                    }
+                })
+                passwd.next().css({ "width": "250px" });
+
+                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
+
+                $('<div class="mcu-build-option-label">').text("").css({"font-size": "x-small" }).appendTo(row4);
+                $("<span/>").text("These values have precedence to those defined @ Arguments.").css({"font-size": "x-small" }).appendTo(row4);
+
+                $("<hr>").appendTo(row4);
+
+                let rowUI;
+
+                $('<div class="mcu-build-option-label">').text("UI Support:").appendTo(row4);
+                let ui_support = $('<input>').appendTo(row4)
+                ui_support.typedInput({
+                    type: "onoff",
+                    types: [{
+                        value: "onoff",
+                        options: [
+                            { value: "0", label: "disabled" },
+                            { value: "1", label: "enabled" }
+                        ],
+                    }],
+                }).on('change', function (event, type, value) {
+
+                    value = (value === "1" ? true : false);
+
+                    if (initializing === false) {
+                        data.ui = value;
+                        persist_config();
+                    }
+
+                    if (rowUI) {
+                        value === true ? rowUI.show(500) : rowUI.hide(500);
+                    }
+
+                })
+                ui_support.next().css({ "width": "auto" });
+
+                // $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
+                rowUI = $('<div>').css({ "margin-top": "8px" }).appendTo(row4).hide();
+                
+                $('<div class="mcu-build-option-label">').text("Screen Pixel Format:").appendTo(rowUI);
+                let pixel = $('<input>').appendTo(rowUI)
+                pixel.typedInput({
+                    type: "pixel",
+                    types: [{
+                        value: "pixel",
+                        options: [
+                            { value: "gray16" },
+                            { value: "gray256" },
+                            { value: "rgb332" },
+                            { value: "rgb565be" },
+                            { value: "rgb565le" },
+                            // { value: "qca4020", label: "QCA4020 | Qualcomm"},
+                        ],
+                    }],
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+                        data.pixel = value;
+                        persist_config();
+                    }
+                })
+                pixel.next().css({ "width": "auto" });
+
+                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(rowUI);
+
+                // $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
+
+                $('<div class="mcu-build-option-label">').text("Screen Rotation:").appendTo(rowUI);
+                let rotation = $('<input>').appendTo(rowUI)
+                rotation.typedInput({
+                    type: "rotation",
+                    types: [{
+                        value: "rotation",
+                        options: [
+                            { value: "0", label: "0°" },
+                            { value: "90", label: "90°" },
+                            { value: "180", label: "180°" },
+                            { value: "270", label: "270°" },
+                            // { value: "rgb565le"},
+                            // { value: "qca4020", label: "QCA4020 | Qualcomm"},
+                        ],
+                    }],
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+                        data.rotation = value;
+                        persist_config();
+                    }
+                })
+                rotation.next().css({ "width": "auto" });
+
+                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(rowUI);
+
+                $('<div class="mcu-build-option-label">').text("CommandList:").appendTo(rowUI);
+                let cll = $('<input>').appendTo(rowUI)
+                cll.typedInput({
+                    type: "num",
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+                        data.cll = value;
+                        persist_config();
+                    }
+                })
+                cll.next().css({ "width": "100px" });
+                $("<span/>").text("Length (bytes)").css({ "margin-left": "20px" }).appendTo(rowUI);
+
+                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(rowUI);
+
+                $('<div class="mcu-build-option-label">').text("DisplayList:").appendTo(rowUI);
+                let dll = $('<input>').appendTo(rowUI)
+                dll.typedInput({
+                    type: "num",
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+                        data.dll = value;
+                        persist_config();
+                    }
+                })
+                dll.next().css({ "width": "100px" });
+                $("<span/>").text("Length (bytes)").css({ "margin-left": "20px" }).appendTo(rowUI);
+
+                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(rowUI);
+
+                $('<div class="mcu-build-option-label">').text("Touch count:").appendTo(rowUI);
+                let touchCount = $('<input>').appendTo(rowUI)
+                touchCount.typedInput({
+                    type: "num"
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+                        data.tc = value;
+                        persist_config();
+                    }
+                })
+                touchCount.next().css({ "width": "100px" });
+
+                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(rowUI);
+
+                $('<div class="mcu-build-option-label">').text("Pixels:").appendTo(rowUI);
+                let pixelsX = $('<input>').appendTo(rowUI)
+                pixelsX.typedInput({
+                    type: "num"
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+                        data.px = value;
+                        persist_config();
+                    }
+                })
+                pixelsX.next().css({ "width": "100px" });
+                $("<span/>").text("X").css({ "margin-left": "20px", "margin-right": "20px" }).appendTo(rowUI);                
+                let pixelsY = $('<input>').appendTo(rowUI)
+                pixelsY.typedInput({
+                    type: "num"
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+                        data.py = value;
+                        persist_config();
+                    }
+                })
+                pixelsY.next().css({ "width": "100px" });
+
                 // Now initialize the form
                 let _target = data.platform.slice(0, data.platform.indexOf("/"));
                 target.typedInput("value", data.platform == "" ? "sim" : _target);
@@ -1494,9 +1652,7 @@
                 plug.typedInput("value", data.port);
                 plug.typedInput("validate");
                 set_more_options_style()    // data.more
-                pixel.typedInput("value", data.pixel);
                 buildtarget.typedInput("value", data.buildtarget);
-                rotation.typedInput("value", data.rotation);
                 {
                     let _instr = [];
                     if (data.debug === true) {
@@ -1509,6 +1665,18 @@
                 }
                 arguments.typedInput("value", data.arguments);
                 creation.typedInput("value", data.creation);
+
+                ssid.typedInput("value", data.ssid);
+                passwd.typedInput("value", data.password);
+
+                ui_support.typedInput("value", data.ui ? "1" : "0");
+                pixel.typedInput("value", data.pixel);
+                rotation.typedInput("value", data.rotation);
+                cll.typedInput("value", data.cll);
+                dll.typedInput("value", data.dll);
+                touchCount.typedInput("value", data.tc);
+                pixelsX.typedInput("value", data.px);
+                pixelsY.typedInput("value", data.py);
 
                 initializing = false;
             },
