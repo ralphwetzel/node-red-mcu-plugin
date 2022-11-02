@@ -1523,6 +1523,10 @@
                 })
                 ui_support.next().css({ "width": "auto" });
 
+                // For today: Disable this!
+                ui_support.typedInput('disable');
+                ui_support.next().find(".red-ui-typedInput-option-label").css({"color": "grey"});
+
                 // $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
                 rowUI = $('<div>').css({ "margin-top": "8px" }).appendTo(row4).hide();
                 
