@@ -1639,7 +1639,7 @@ module.exports = function(RED) {
 
                 proxy = new mcuProxy.proxy();
 
-                proxy.on("status", (data, id) => {
+                proxy.on("status", (id, data) => {
 
                     /* {
                         text: 1658087621772,
@@ -1658,8 +1658,6 @@ module.exports = function(RED) {
                     if (shape) { status["shape"] = shape;}
                     if (text) { status["text"] = text;}
         
-                    id = id ?? data?.source?.id
-
                     if (id) {
                         console.log("Emitting to " + id);
                         RED.events.emit("node-status",{
@@ -1671,48 +1669,29 @@ module.exports = function(RED) {
                     // console.log("Status:", status);
                 })
 
-                proxy.on("input", (data, id) => {
-
-                    id = id ?? data?.source?.id
-
+                proxy.on("input", (id, data) => {
                     if (id) {
                         let node = RED.nodes.getNode(id);
                         if (node) {
-                            delete data.source;
                             node.receive(data);
                         }
                     }
                 })
 
-                proxy.on("error", (data, id) => {
-
-                    id = id ?? data?.source?.id
-
-                    console.log(data);
+                proxy.on("error", (id, data) => {
                     if (id) {
                         let node = RED.nodes.getNode(id);
                         if (node) {
-                            console.log(data.error);
                             node.error(data.error);
-                            // delete data.source;
-                            // node.receive(data);
                         }
                     }
                 })
 
-                proxy.on("warn", (data, id) => {
-
-                    id = id ?? data?.source?.id
-
-                    console.log(data);
+                proxy.on("warn", (id, data) => {
                     if (id) {
-
                         let node = RED.nodes.getNode(id);
                         if (node) {
-                            console.log(data.warn);
                             node.warn(data.warn);
-                            // delete data.source;
-                            // node.receive(data);
                         }
                     }
                 })
