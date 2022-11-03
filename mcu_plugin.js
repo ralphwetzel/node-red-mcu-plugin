@@ -110,6 +110,13 @@ function get_require_path(req_path) {
 // *****
 
 // *****
+// Make available the Node-RED typeRegistry 
+
+const typeRegistryPath = get_require_path("node_modules/@node-red/registry");
+console.log(typeRegistryPath);
+const typeRegistry = require(typeRegistryPath);
+
+// *****
 // Apply patch to get access to additional node related information
 // This has to happen immediately when this file is required, before any Node-RED logic kicks in...
 
@@ -280,18 +287,41 @@ module.exports = function(RED) {
     registerMCUModeType("inject", "__mcu*inject")
 
     function mcu_debug(config) {
-        RED.nodes.createNode(this, config);
-        // console.log(config);
 
-        let node = this;
-        node.on('input', function(msg, send, done) {
+        let dn;
 
-            console.log("@mcu*debug", msg);
+        // Create a standard DebugNode
+        let debugNodeConstructor = typeRegistry.get("debug");
+        if (!debugNodeConstructor)
+            return;
 
-        });
+        dn = new debugNodeConstructor(config);
+
+        // patch the "active" property for getter & setter !
+        if (dn.active) {
+            dn._active = dn.active;
+            delete dn.active;
+            Object.defineProperty(dn, "active", {
+                get() {
+                    return this._active;
+                },
+                set(status) {
+                    this._active = status ? true : false;
+                    if (this.__getProxy) {
+                        let p = this.__getProxy();
+                        if (p) {
+                            p.send2mcu("debug", this.z, this.id, this._active);
+                        }
+                    }
+
+                }
+            })
+        }
+        return dn;
     }
     RED.nodes.registerType("__mcu*debug", mcu_debug);
-    registerMCUModeType("debug", "debug")
+    // registerMCUModeType("debug", "debug")
+    registerMCUModeType("debug", "__mcu*debug")
 
     // End "Hook ..."
     // *****
@@ -324,10 +354,12 @@ module.exports = function(RED) {
         // console.log(config);
 
         // replacement table NR=>MCU
+        /*
         let replace = {
             'inject': '__mcu*inject',
             'debug': 'debug'
         }
+        */
 
         /*
         if (flows2build) {
@@ -1013,8 +1045,6 @@ module.exports = function(RED) {
                         default:
                             console.log(`Type "${n.type}" = Node-RED core node: No manifest added.`);
                     }
-                    return;
-                        return; 
                     return;
 
                 case "node-red-node-pi-gpio":
