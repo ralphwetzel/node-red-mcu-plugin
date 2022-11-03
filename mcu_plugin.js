@@ -995,23 +995,31 @@ module.exports = function(RED) {
             let module = node.module;
             if (!module) return;
 
-            if (module === "node-red") {
+            
+            switch (module) {
+                case "node-red":
+                    switch(n.type) {
+                        case "trigger":
+                            // let module = "@node-red/nodes/core/function/trigger";       // predefined template
+                            // let mp = manifest.from_template(module, dest)
+                            // if (mp && typeof(mp) === "string") {
+                            //     manifest.include_manifest(mp);
+                            // }
+                            // return;
+                            manifest.include_manifest("$(MCUROOT)/nodes/trigger/manifest.json");
+                            break;
 
-                switch(n.type) {
-                    case "trigger":
-                        // let module = "@node-red/nodes/core/function/trigger";       // predefined template
-                        // let mp = manifest.from_template(module, dest)
-                        // if (mp && typeof(mp) === "string") {
-                        //     manifest.include_manifest(mp);
-                        // }
-                        // return;
-                        manifest.include_manifest("$(MCUROOT)/nodes/trigger/manifest.json")
-
-                    default:
-                        console.log(`Type "${n.type}" = core node: No manifest added.`);
+                        default:
+                            console.log(`Type "${n.type}" = Node-RED core node: No manifest added.`);
+                    }
+                    return;
                         return; 
-                    
-                }
+                    return;
+
+                case "node-red-node-pi-gpio":
+                    console.log(`Type "${n.type}" = node-red-mcu core node: No manifest added.`);
+                    return;
+            
             }
 
             if (manifest.resolver_paths.indexOf(node.path) < 0) {
