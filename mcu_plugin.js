@@ -298,7 +298,7 @@ module.exports = function(RED) {
         dn = new debugNodeConstructor(config);
 
         // patch the "active" property for getter & setter !
-        if (dn.active) {
+        if ("active" in dn) {
             dn._active = dn.active;
             delete dn.active;
             Object.defineProperty(dn, "active", {
