@@ -539,6 +539,7 @@ module.exports = function(RED) {
             'esp32/m5stack_core2',
             'esp32/m5stack_fire',
             'esp32/m5stick_c',
+            'esp32/m5stick_cplus',
             'esp32/moddable_display_2',
             'esp32/moddable_two',
             'esp32/moddable_two_io',
