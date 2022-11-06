@@ -1744,23 +1744,65 @@ module.exports = function(RED) {
                     }
                 })
 
-                proxy.on("login", () => {
-                    // RED.notify("MCU initializing...", { type: "warning", timeout: 3000 });
+                proxy.on("mcu", (data) => {
+
+                    let token = "state";
+
+                    if (token in data === false)
+                        return;
+                    
+                    let s = data[token];
+                    let msg;
+                    let options;
+
+                    switch (s) {
+                        case "login":
+                            msg = "MCU initializing...";
+                            options = { type: "warning", timeout: 5000 };
+                            break;
+                        
+                        case "building":
+
+                        // building & ready fire almost simultaneously
+
+                        //     msg = "MCU building flows...";
+                        //     options = { type: "warning", timeout: 1000 };
+                        //     break;
+
+                        // case "ready":
+                            msg = "MCU ready";
+                            options = { timeout: 5000 };
+                            break;
+
+                        default:
+                            return;
+
+                    }
 
                     RED.comms.publish("mcu/notify",  {
-                        "message": "MCU initializing...", 
-                        "options": { type: "warning", timeout: 5000 }
+                        "message": msg, 
+                        "options": options
                     });
+
                 })
 
-                proxy.on("ready", () => {
-                    // RED.notify("MCU initializing...", { type: "warning", timeout: 3000 });
+                // proxy.on("login", () => {
+                //     // RED.notify("MCU initializing...", { type: "warning", timeout: 3000 });
 
-                    RED.comms.publish("mcu/notify",  {
-                        "message": "MCU ready.", 
-                        "options": { timeout: 5000 }
-                    });
-                })
+                //     RED.comms.publish("mcu/notify",  {
+                //         "message": "MCU initializing...", 
+                //         "options": { type: "warning", timeout: 5000 }
+                //     });
+                // })
+
+                // proxy.on("ready", () => {
+                //     // RED.notify("MCU initializing...", { type: "warning", timeout: 3000 });
+                    
+                //     RED.comms.publish("mcu/notify",  {
+                //         "message": "MCU ready.", 
+                //         "options": { timeout: 5000 }
+                //     });
+                // })
                 
 
                 // build_and_run()
