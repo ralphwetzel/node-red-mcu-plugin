@@ -1744,6 +1744,25 @@ module.exports = function(RED) {
                     }
                 })
 
+                proxy.on("login", () => {
+                    // RED.notify("MCU initializing...", { type: "warning", timeout: 3000 });
+
+                    RED.comms.publish("mcu/notify",  {
+                        "message": "MCU initializing...", 
+                        "options": { type: "warning", timeout: 5000 }
+                    });
+                })
+
+                proxy.on("ready", () => {
+                    // RED.notify("MCU initializing...", { type: "warning", timeout: 3000 });
+
+                    RED.comms.publish("mcu/notify",  {
+                        "message": "MCU ready.", 
+                        "options": { timeout: 5000 }
+                    });
+                })
+                
+
                 // build_and_run()
                 // .then(msg => { console.log(msg) })
                 // .catch(msg => {console.log("error @ build_and_run", msg)});
