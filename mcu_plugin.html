@@ -498,8 +498,21 @@
             }
         })
 
-        let flows2build = [];
+        RED.comms.subscribe("mcu/notify", function (topic, data) {
+            
+            if (data) {
 
+                // sanitize data
+                // ToDo: Confirm if this is necessary!
+                if (data.options?.buttons)
+                    delete data.options.buttons
+
+                RED.notify(data.message, data.options);
+            }
+
+        })
+
+        let flows2build = [];
 
         // Patch mcu flag into the defaults of any type
         // This is a prerequisite as the NR editor only forwards properties to the runtime,
