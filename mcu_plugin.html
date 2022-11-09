@@ -71,6 +71,18 @@
         outline: solid rgb(7, 48, 112) 2px;
     }
 
+    .mcu-build-progress-bar {
+        background: rgb(7, 48, 112);
+        width: 0px;
+        height: 2px;
+        margin-top: 0px;
+        margin-left: 4px;
+        margin-right: 4px;
+        margin-bottom: 2px;
+        max-width: calc(100% - 8px);
+    }
+
+
 </style>
 
 <script type="text/javascript" src="resources/@ralphwetzel/node-red-mcu-plugin/lib/flashTab.js"></script>
@@ -99,6 +111,8 @@
     
     let selectorPanel;
     let buildPanel;
+
+    let progress_width;
 
     function show() {
         RED.sidebar.show("node-red-mcu");
@@ -224,7 +238,7 @@
             config_view.editableList("width", $(config_view).width());
             // config_view.css({"top": "0 px"});
 
-            let cvh = bottom - 84;
+            let cvh = bottom - 88;
             config_view.editableList("height", cvh < 100 ? 100 : cvh);
             
             if (cvh < 100) {
@@ -440,6 +454,8 @@
         RED.events.on("flows:change", onFlowChange)
         RED.events.on("flows:reorder", onFlowsReorder)
 
+        const progress_re = /^(?:Writing at 0x)(?:[0123456789abcdef]+\.{3} \()(\d{1,3})(?: %\))/;
+
         RED.comms.subscribe("mcu/stdout/#", function (topic, msg) {
 
             let mcuc = $("#mcu_console");
@@ -471,6 +487,16 @@
                         // ... we scroll it there afterwards again.
                         mcuc.scrollTop(mcuc[0].scrollHeight);
                     }
+
+                    if (progress_width < 100) {
+                        res = progress_re.exec(msg);
+                        if (res && res.length>1) {
+                            progress_width = res[1];
+                        } else {
+                            progress_width = (progress_width >= 15) ? 1 : (progress_width + 1);
+                        }
+                    }
+                    $(".mcu-build-progress-bar").css({"width": `${progress_width}%`});
                 }
             }
             // console.log(topic, msg);
@@ -500,6 +526,8 @@
 
         RED.comms.subscribe("mcu/notify", function (topic, data) {
             
+            $(".mcu-build-progress-bar").css({"width": "0px"});
+
             if (data) {
 
                 // sanitize data
@@ -808,13 +836,35 @@
 
         bPHh = buildPanelHeader.height();
 
-        console_container = $('<div>').css({ "height": "100%", "display": "none" }).appendTo(buildPanel);
+        console_container = $('<div>').css({ "height": "calc(100% - 42px - 40px - 4px)", "display": "none" }).appendTo(buildPanel);
         console_view = $('<textarea id="mcu_console" wrap="hard" readonly>')
+            // .css({
+            //     "position": "absolute",
+            //     "top": "51px",
+            //     "box-sizing": "border-box",
+            //     "margin": "4px",
+            //     "font-family": "monospace",
+            //     "font-size": "9pt",
+            //     "color": "white",
+            //     "background-color": "black",
+            //     "white-space": "pre",
+            //     "overflow": "scroll",
+            //     "width": "calc(100% - 8px)",
+            //     "resize": "none",
+            //     "line-height": "normal",
+            //     "cursor": "default",
+            //     // "height": "calc(100% - 42px - 52px - 4px)",
+            //     "height": "100%",
+            //     "min-height": "89px"
+            // })
             .css({
-                "position": "absolute",
-                "top": "51px",
+                "position": "relative",
+                // "top": "51px",
                 "box-sizing": "border-box",
-                "margin": "4px",
+                "margin-top": "4px",
+                "margin-left": "4px",
+                "margin-right": "4px",
+                "margin-bottom": "2px",
                 "font-family": "monospace",
                 "font-size": "9pt",
                 "color": "white",
@@ -825,10 +875,13 @@
                 "resize": "none",
                 "line-height": "normal",
                 "cursor": "default",
-                "height": "calc(100% - 42px - 52px)",
+                // "height": "calc(100% - 42px - 52px - 4px)",
+                "height": "100%",
                 "min-height": "89px"
             })
             .appendTo(console_container);
+
+        $("<div class='mcu-build-progress-bar'>").appendTo(console_container);
 
         config_container = $('<div>')
             .css({
@@ -843,6 +896,9 @@
             .appendTo(buildPanel);
 
         config_view = $('<ol id="__config_view__">').appendTo(config_container)
+
+        $("<div class='mcu-build-progress-bar'>").css({"margin-top": "4px", "margin-left": "0px"}).appendTo(config_container);
+
         config_view.editableList({
             addButton: "Add config...",
             height: 200,
@@ -1130,6 +1186,8 @@
 
                     mode ??= "build";
                     let spin_timer;
+
+                    progress_width = 0;
 
                     function build(data) {
 
