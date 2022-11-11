@@ -1757,7 +1757,20 @@ module.exports = function(RED) {
 
                     switch (s) {
                         case "login":
-                            msg = "MCU initializing...";
+
+                            let from = data.from
+                            if (from.length > 0) {
+                                if (from === "main") {
+                                    msg = "MCU is initializing...";
+                                } else if (from.length > 6) {
+                                    let c = from.substring(0, 6);
+                                    let c_id = from.substring(6);
+                                    if (c === "config" && c_id == build_options.id) {
+                                        msg = "Simulator is initializing...";
+                                    }
+                                }
+                            }
+
                             options = { type: "warning", timeout: 5000 };
                             break;
                         
@@ -1770,7 +1783,7 @@ module.exports = function(RED) {
                         //     break;
 
                         // case "ready":
-                            msg = "MCU ready";
+                            msg = "Flows are ready.";
                             options = { timeout: 5000 };
                             break;
 
@@ -1779,10 +1792,12 @@ module.exports = function(RED) {
 
                     }
 
-                    RED.comms.publish("mcu/notify",  {
-                        "message": msg, 
-                        "options": options
-                    });
+                    if (msg && msg.length > 0) {
+                        RED.comms.publish("mcu/notify",  {
+                            "message": msg, 
+                            "options": options
+                        });    
+                    }
 
                 })
 
