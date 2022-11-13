@@ -1110,6 +1110,10 @@ module.exports = function(RED) {
             manifest.add(c, "creation");
         }
 
+        // enable editor message transmossion by the MCU
+        let editor_transmission_on = { "noderedmcu": { "editor": true }};
+        manifest.add(editor_transmission_on, "config");
+
         // let test = {
         //     "static": 65536,
         //     "stack": 384,
