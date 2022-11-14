@@ -323,6 +323,20 @@ module.exports = function(RED) {
     // registerMCUModeType("debug", "debug")
     registerMCUModeType("debug", "__mcu*debug")
 
+    // We use this node if no replacement is defined.
+    // This gives us access to the basic functionality of a node, like emitting warnings & errors.
+    function mcu_void(config) {
+
+        // Let's give back this voided node it's original type!
+        if ("void" in config) {
+            config.type = config.void;
+        }
+
+        RED.nodes.createNode(this, config);
+    }
+    RED.nodes.registerType("__mcu*void", mcu_void);
+
+
     // End "Hook ..."
     // *****
 
@@ -391,9 +405,14 @@ module.exports = function(RED) {
                     config.type = t;
                     console.log("replacing " + config.id + " w/ " + t)
                 } else {
-                    // if no replacement node defined: Don't create any node!
+
+                    // if no replacement node defined: Save the original type in config.void...
+                    config.void = config.type;
+                    // ... and create the void replacement node!
+                    config.type = "__mcu*void";
+
                     console.log("voiding " + config.id)
-                    return;
+                    // return;
                 }
             }
         }
