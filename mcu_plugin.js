@@ -171,7 +171,7 @@ module.exports = function(RED) {
     // *****
     // env variable settings: Ensure ...
     
-    let IDF_PATH;
+    // let IDF_PATH;
 
     // ... that $MODDABLE is defined.
     const MODDABLE = process.env.MODDABLE;
@@ -1258,7 +1258,7 @@ module.exports = function(RED) {
         publish_stdout(`Working directory: ${make_dir}`);
 
         let env = {
-            "HOME": process.env.HOME,
+            "HOME": os.homedir(),
             "SHELL": process.env.SHELL,
             "PATH": process.env.PATH,
             "MODDABLE": MODDABLE,
@@ -1389,7 +1389,9 @@ module.exports = function(RED) {
                 cmd
             ],
             "esp32": [
-                "source $IDF_PATH/export.sh",
+                os.platform() === "win32"
+                    ? '%comspec% /k ""%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars32.bat" && pushd %IDF_PATH% && "%IDF_TOOLS_PATH%\idf_cmd_init.bat" && popd"'
+                    : "source $IDF_PATH/export.sh",
                 cmd
             ],
             "pico": [
