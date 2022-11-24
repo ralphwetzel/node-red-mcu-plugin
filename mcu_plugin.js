@@ -1271,7 +1271,7 @@ module.exports = function(RED) {
         if (platform[1]?.length > 0)
             env.SUBPLATFORM = platform[1]
 
-        const HOME = process.env.HOME ?? "";
+        const HOME = env.HOME ?? "";
         if (HOME.length < 1) {
             throw(`$HOME is not defined.`)
         }
