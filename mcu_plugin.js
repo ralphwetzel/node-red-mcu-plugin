@@ -1409,7 +1409,7 @@ module.exports = function(RED) {
 
         switch (os.platform()) {
             case "linux":
-                shell_options["SHELL"] = "/bin/bash"
+                shell_options["shell"] = "/bin/bash"
                 break;
         }
 
