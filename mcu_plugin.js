@@ -1172,7 +1172,10 @@ module.exports = function(RED) {
             publish("mcu/stdout/test", msg, false); 
         }
 
-        publish_stdout("Starting Build process...")
+        publish_stdout("Starting build process...")
+
+        publish_stderr(`Host system check: ${os.version()}`);
+        publish_stderr(`HOME directory check: ${os.homedir()}`);
 
         // create flows.json
         // create manifest.json for nodes in flows.json
