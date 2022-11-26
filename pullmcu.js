@@ -1,8 +1,6 @@
 const { execSync } = require('child_process');
 const fs = require('fs-extra');
 
-console.log("Installing node-red-mcu...");
-
 if (fs.existsSync("./node-red-mcu")) {
     execSync("git pull");
 } else {
