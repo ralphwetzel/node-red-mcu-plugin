@@ -1,14 +1,15 @@
 {
   "name": "@ralphwetzel/node-red-mcu-plugin",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Plugin to support the Node-RED implementation for Microcontrollers",
   "node-red": {
+    "version": ">=2.0.0, <=3.0.2",
     "plugins": {
       "mcu": "mcu_plugin.js"
     }
   },
   "scripts": {
-    "install": "if cd node-red-mcu; then git pull; else git clone https://github.com/phoddie/node-red-mcu.git node-red-mcu; fi"
+    "install": "node pullmcu.js"
   },
   "repository": {
     "type": "git",
@@ -16,16 +17,22 @@
   },
   "keywords": [
     "node-red",
-    "node-red-mcu"
+    "node-red-mcu",
+    "Node-RED",
+    "Node-RED MCU Edition"
   ],
   "dependencies": {
     "clone": "^2.1.2",
     "fs-extra": "^10.1.0",
     "loglevel": "^1.8.0",
+    "log4js": "^6.7.0",
     "nanoid": "<4",
     "resolve-package-path": "^4.0.3",
     "serialport": "^10.4.0",
     "x2js": "^3.4.3"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   },
   "author": "Ralph Wetzel",
   "license": "MIT",
