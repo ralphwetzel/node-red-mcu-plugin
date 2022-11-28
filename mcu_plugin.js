@@ -1418,9 +1418,9 @@ module.exports = function(RED) {
             case "esp32":
                 if (os.platform() === "win32") {
                     bcmds = [
-                        '%ProgramFiles%\\Microsoft Visual Studio\\2022\\Community\\VC\Auxiliary\\Build\\vcvars32.bat',
+                        'CALL "%ProgramFiles%\\Microsoft Visual Studio\\2022\\Community\\VC\Auxiliary\\Build\\vcvars64.bat"',
                         'pushd %IDF_PATH%',
-                        '%IDF_TOOLS_PATH%\idf_cmd_init.bat',
+                        'CALL "%IDF_TOOLS_PATH%\\idf_cmd_init.bat"',
                         'popd',
                         cmd
                     ]
@@ -1438,48 +1438,69 @@ module.exports = function(RED) {
                 break;
         }
 
-        if (os.platform() == "win32") {
-            // very special command necessary
-            let bc = '%comspec% /k "'
-            for (i=0, l=bcmds.length; i<l; i++) {
-                if (i>0)
-                    bc += " && ";
-                bc += `"${bcmds[i]}"`
-            }
-            bcmds = bc + '"';
-        } else {
-            bcmds = bcmds.join(" && ");
-        }
+        let run_cmd;
 
         switch (os.platform()) {
+            case "win32":
+
+                shell_options["windowsHide"] = true;
+
+                publish_stdout("Creating build batch file...")
+                fs.writeFileSync(path.join(make_dir, "build.bat"), bcmds.join("\r\n"))
+                bcmds = ["build.bat"];
+
+                run_cmd = cmd => new Promise((resolve, reject) => {
+
+                    publish_stdout(`> ${cmd}`);
+
+                    let builder = execFile(cmd, undefined, shell_options, (err, stdout, stderr) => {
+                        if (err) {
+                            reject(err)
+                        }
+                        resolve();
+                    });
+
+                    builder.stdout.on('data', function(data) {
+                        publish_stdout(data); 
+                    });
+                    builder.stderr.on('data', function(data) {
+                        publish_stdout(data); 
+                    });
+
+                });
+                break;
+            
             case "linux":
                 shell_options["shell"] = "/bin/bash";
-                break;
-            case "win32":
-                shell_options["windowsHide"] = true;
-                break;
+            default:
 
+                run_cmd = cmd => new Promise((resolve, reject) => {
+
+                    publish_stdout(`> ${cmd}`);
+        
+                    let builder = exec(cmd, shell_options, (err, stdout, stderr) => {
+                        if (err) {
+                            reject(err)
+                        }
+                        resolve();
+                    });
+        
+                    builder.stdout.on('data', function(data) {
+                        publish_stdout(data); 
+                publish_stdout(data); 
+                        publish_stdout(data); 
+                    });
+                    builder.stderr.on('data', function(data) {
+                        publish_stdout(data); 
+                publish_stdout(data); 
+                        publish_stdout(data); 
+                    });
+        
+                });
+        
         }
 
-        const run_cmd = cmd => new Promise((resolve, reject) => {
-
-            publish_stdout(`> ${cmd}`);
-
-            let builder = exec(cmd, shell_options, (err, stdout, stderr) => {
-                if (err) {
-                    reject(err)
-                }
-                resolve();
-            });
-
-            builder.stdout.on('data', function(data) {
-                publish_stdout(data); 
-            });
-            builder.stderr.on('data', function(data) {
-                publish_stdout(data); 
-            });
-
-        });
+        // this can be simplified - as we're meanwhile only running 1-liners
 
         // https://stackoverflow.com/questions/40328932/javascript-es6-promise-for-loop
         return new Promise((resolve, reject) => {
