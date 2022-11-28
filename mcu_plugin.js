@@ -1157,7 +1157,7 @@ module.exports = function(RED) {
     
     }
 
-    async function build_flows(options, publish) {
+    function build_flows(options, publish) {
 
         options = options ?? {};
 
@@ -1384,36 +1384,81 @@ module.exports = function(RED) {
 
         publish_stdout("> cd " + make_dir);
 
-        const build_commands = {
-            "sim": [
-                cmd
-            ],
-            "esp": [
-                cmd
-            ],
-            "esp32": [
-                os.platform() === "win32"
-                    ? '%comspec% /k ""%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars32.bat" && pushd %IDF_PATH% && "%IDF_TOOLS_PATH%\idf_cmd_init.bat" && popd"'
-                    : "source $IDF_PATH/export.sh",
-                cmd
-            ],
-            "pico": [
-                cmd
-            ],
-            "gecko": [
-                cmd
-            ],
-            "qca4020": [
-                cmd
-            ]
+        // const build_commands = {
+        //     "sim": [
+        //         cmd
+        //     ],
+        //     "esp": [
+        //         cmd
+        //     ],
+        //     "esp32": [
+        //         os.platform() === "win32"
+        //             ? '%comspec% /k ""%ProgramFiles%\\Microsoft Visual Studio\\2022\\Community\\VC\Auxiliary\\Build\\vcvars32.bat" && pushd %IDF_PATH% && "%IDF_TOOLS_PATH%\idf_cmd_init.bat" && popd"'
+        //             : "source $IDF_PATH/export.sh",
+        //         cmd
+        //     ],
+        //     "pico": [
+        //         cmd
+        //     ],
+        //     "gecko": [
+        //         cmd
+        //     ],
+        //     "qca4020": [
+        //         cmd
+        //     ]
+        // }
+
+        let bcmds = [cmd];  // build_commands
+
+        switch (pid) {
+            case "sim":
+            case "esp":
+                // bcmds = [cmd];
+                break;
+            case "esp32":
+                if (os.platform() === "win32") {
+                    bcmds = [
+                        '%ProgramFiles%\\Microsoft Visual Studio\\2022\\Community\\VC\Auxiliary\\Build\\vcvars32.bat',
+                        'pushd %IDF_PATH%',
+                        '%IDF_TOOLS_PATH%\idf_cmd_init.bat',
+                        'popd',
+                        cmd
+                    ]
+                } else {
+                    bcmds = [
+                        'source $IDF_PATH/export.sh',
+                        cmd
+                    ]
+                }
+                break;
+            case "pico":
+            case "gecko":
+            case "qca4020":
+                // bcmds = [cmd];
+                break;
         }
 
-        let bcmds = [build_commands[pid].join(" && ")];
+        if (os.platform() == "win32") {
+            // very special command necessary
+            let bc = '%comspec% /k "'
+            for (i=0, l=bcmds.length; i<l; i++) {
+                if (i>0)
+                    bc += " && ";
+                bc += `"${bcmds[i]}"`
+            }
+            bcmds = bc + '"';
+        } else {
+            bcmds = bcmds.join(" && ");
+        }
 
         switch (os.platform()) {
             case "linux":
-                shell_options["shell"] = "/bin/bash"
+                shell_options["shell"] = "/bin/bash";
                 break;
+            case "win32":
+                shell_options["windowsHide"] = true;
+                break;
+
         }
 
         const run_cmd = cmd => new Promise((resolve, reject) => {
