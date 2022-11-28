@@ -1417,10 +1417,11 @@ module.exports = function(RED) {
                 break;
             case "esp32":
                 if (os.platform() === "win32") {
+                    // execFile doesn't expand the env variables... ??
                     bcmds = [
-                        'CALL "%ProgramFiles%\\Microsoft Visual Studio\\2022\\Community\\VC\Auxiliary\\Build\\vcvars64.bat"',
+                        `CALL "${proces.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\Auxiliary\\Build\\vcvars64.bat"`,
                         'pushd %IDF_PATH%',
-                        'CALL "%IDF_TOOLS_PATH%\\idf_cmd_init.bat"',
+                        `CALL "${proces.env["IDF_TOOLS_PATH"]}\\idf_cmd_init.bat"`,
                         'popd',
                         cmd
                     ]
@@ -1487,12 +1488,8 @@ module.exports = function(RED) {
         
                     builder.stdout.on('data', function(data) {
                         publish_stdout(data); 
-                publish_stdout(data); 
-                        publish_stdout(data); 
                     });
                     builder.stderr.on('data', function(data) {
-                        publish_stdout(data); 
-                publish_stdout(data); 
                         publish_stdout(data); 
                     });
         
