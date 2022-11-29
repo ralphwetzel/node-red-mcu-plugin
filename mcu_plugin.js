@@ -1475,6 +1475,8 @@ module.exports = function(RED) {
                 shell_options["shell"] = "/bin/bash";
             default:
 
+                bcmds = [bcmds.join(" && ")];
+
                 run_cmd = cmd => new Promise((resolve, reject) => {
 
                     publish_stdout(`> ${cmd}`);
