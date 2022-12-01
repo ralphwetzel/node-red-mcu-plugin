@@ -459,34 +459,34 @@ module.exports = function(RED) {
     // *****
 
 
-    // *****
-    function patch_xs_file(pre, post) {
+    // ***** RDW221201: obsolete
+    // function patch_xs_file(pre, post) {
 
-        let moddable = process.env.MODDABLE
+    //     let moddable = process.env.MODDABLE
         
-        if (moddable) {
-            let os_file = {
-                "darwin": "mac_xs.c"
-            }
+    //     if (moddable) {
+    //         let os_file = {
+    //             "darwin": "mac_xs.c"
+    //         }
     
-            let xs_file_path = path.join(moddable, 'xs', 'platforms', os_file[process.platform]);
-            let xs_file = fs.readFileSync(xs_file_path).toString();
-            let check_pre = "address.sin_port = htons(" + pre + ");";
-            let check_post = "address.sin_port = htons(" + post + ");";
-            if (xs_file.indexOf(check_pre) > 0) {
-                xs_file = xs_file.replace(check_pre, check_post);
-            }
-            if (xs_file.indexOf(check_post) < 0) {
-                throw "Failed to patch platform specific debug connection.";
-            } else {
-                console.log("Patch success confirmed @ " + post + ".");
-                fs.writeFileSync(xs_file_path, xs_file);
-            }
-        } else {
-            throw "Cannot proceed. $MODDABLE is not defined.";
-        }
-        return;
-    }
+    //         let xs_file_path = path.join(moddable, 'xs', 'platforms', os_file[process.platform]);
+    //         let xs_file = fs.readFileSync(xs_file_path).toString();
+    //         let check_pre = "address.sin_port = htons(" + pre + ");";
+    //         let check_post = "address.sin_port = htons(" + post + ");";
+    //         if (xs_file.indexOf(check_pre) > 0) {
+    //             xs_file = xs_file.replace(check_pre, check_post);
+    //         }
+    //         if (xs_file.indexOf(check_post) < 0) {
+    //             throw "Failed to patch platform specific debug connection.";
+    //         } else {
+    //             console.log("Patch success confirmed @ " + post + ".");
+    //             fs.writeFileSync(xs_file_path, xs_file);
+    //         }
+    //     } else {
+    //         throw "Cannot proceed. $MODDABLE is not defined.";
+    //     }
+    //     return;
+    // }
     // *****
 
 
@@ -1576,137 +1576,137 @@ module.exports = function(RED) {
     } 
 
 
-    function build_and_run(publish, options) {
+    // function build_and_run(publish, options) {
 
-        options = options ?? {};
-        let cmd = "mcconfig"
+    //     options = options ?? {};
+    //     let cmd = "mcconfig"
 
-        if (options.debug === true) {
-            cmd += " -d";
-            cmd += " -x localhost:5004"
-        }
+    //     if (options.debug === true) {
+    //         cmd += " -d";
+    //         cmd += " -x localhost:5004"
+    //     }
 
-        if (options.pixel) {
-            cmd += " -f " + options.pixel;
-        }
+    //     if (options.pixel) {
+    //         cmd += " -f " + options.pixel;
+    //     }
 
-        if (options.release === true) {
-            cmd += " -i"
-        }
+    //     if (options.release === true) {
+    //         cmd += " -i"
+    //     }
 
-        if (options.make === true) {
-            cmd += " -m";
-        }
+    //     if (options.make === true) {
+    //         cmd += " -m";
+    //     }
 
-        if (options.platform) {
-            cmd += " -p " + options.platform;
-        }
+    //     if (options.platform) {
+    //         cmd += " -p " + options.platform;
+    //     }
 
-        if (options.rotation) {
-            cmd += " -r " + options.rotation;
-        }
+    //     if (options.rotation) {
+    //         cmd += " -r " + options.rotation;
+    //     }
 
-        if (options.buildtarget) {
-            cmd += " -t " + options.buildtarget;
-        }
+    //     if (options.buildtarget) {
+    //         cmd += " -t " + options.buildtarget;
+    //     }
 
-        if (options.arguments) {
+    //     if (options.arguments) {
 
-            let args = JSON.parse(options.arguments)
-            for (key in args) {
-                cmd += " " + key + '="' + args[key] + '"'
-            }
-        }
+    //         let args = JSON.parse(options.arguments)
+    //         for (key in args) {
+    //             cmd += " " + key + '="' + args[key] + '"'
+    //         }
+    //     }
 
-        return new Promise((resolve, reject) => {
+    //     return new Promise((resolve, reject) => {
 
-            let msg = {};
-            let error;
+    //         let msg = {};
+    //         let error;
     
-            try {
-                let make_dir = make_build_environment();
-                // console.log(make_dir);
+    //         try {
+    //             let make_dir = make_build_environment();
+    //             // console.log(make_dir);
                 
-                // RDW 20220805: obsolete now
-                // patch_xs_file("5002", "5004");
+    //             // RDW 20220805: obsolete now
+    //             // patch_xs_file("5002", "5004");
                 
-                publish("mcu/stdout/test",  "cd " + make_dir, false); 
-                publish("mcu/stdout/test",  cmd, false); 
+    //             publish("mcu/stdout/test",  "cd " + make_dir, false); 
+    //             publish("mcu/stdout/test",  cmd, false); 
 
-                let builder = exec(cmd, {
-                    cwd: make_dir,
-                }, (err, stdout, stderr) => {
+    //             let builder = exec(cmd, {
+    //                 cwd: make_dir,
+    //             }, (err, stdout, stderr) => {
             
-                    if (err) {
-                        msg.error = {};
-                        for (e in err) {
-                            msg.error[e] = err[e];
-                        }
-                    }
+    //                 if (err) {
+    //                     msg.error = {};
+    //                     for (e in err) {
+    //                         msg.error[e] = err[e];
+    //                     }
+    //                 }
                     
-                    msg.exec = {};
-                    msg.exec.stdout = stdout;
-                    msg.exec.stderr = stderr;
+    //                 msg.exec = {};
+    //                 msg.exec.stdout = stdout;
+    //                 msg.exec.stderr = stderr;
     
-                    // console.log(msg);
+    //                 // console.log(msg);
 
-                    // RDW 20220805: obsolete now
-                    /*
-                    try {
-                        patch_xs_file("5004", "5002");
-                    }
-                    catch (error) {
-                        if (!msg.error) {
-                            msg.error = {};
-                        }
-                        msg.error['patch_error'] = error; 
-                    }
-                    */
+    //                 // RDW 20220805: obsolete now
+    //                 /*
+    //                 try {
+    //                     patch_xs_file("5004", "5002");
+    //                 }
+    //                 catch (error) {
+    //                     if (!msg.error) {
+    //                         msg.error = {};
+    //                     }
+    //                     msg.error['patch_error'] = error; 
+    //                 }
+    //                 */
 
-                    if (msg.error) {
-                        reject(msg)
-                    }
+    //                 if (msg.error) {
+    //                     reject(msg)
+    //                 }
 
-                    resolve(msg);
-                });
+    //                 resolve(msg);
+    //             });
 
-                builder.stdout.on('data', function(data) {
-                    publish("mcu/stdout/test", data, false); 
-                });
-                builder.stderr.on('data', function(data) {
-                    publish("mcu/stdout/test", data, false); 
-                });
+    //             builder.stdout.on('data', function(data) {
+    //                 publish("mcu/stdout/test", data, false); 
+    //             });
+    //             builder.stderr.on('data', function(data) {
+    //                 publish("mcu/stdout/test", data, false); 
+    //             });
 
-            } catch (err) {
-                console.log("@catch (err)")
-                console.log(err);
+    //         } catch (err) {
+    //             console.log("@catch (err)")
+    //             console.log(err);
 
-                msg.error = {};
-                for (e in err) {
-                    msg.error[e] = err[e];
-                }
+    //             msg.error = {};
+    //             for (e in err) {
+    //                 msg.error[e] = err[e];
+    //             }
     
-                // RDW 20220805: obsolete now
-                /*
-                try {
-                    patch_xs_file("5004", "5002");
-                }
-                catch (error) {
-                    if (!msg.error) {
-                        msg.error = {};
-                    }
-                    msg.error['patch_error'] = error; 
-                }
-                */
+    //             // RDW 20220805: obsolete now
+    //             /*
+    //             try {
+    //                 patch_xs_file("5004", "5002");
+    //             }
+    //             catch (error) {
+    //                 if (!msg.error) {
+    //                     msg.error = {};
+    //                 }
+    //                 msg.error['patch_error'] = error; 
+    //             }
+    //             */
 
-                console.log("Error:", msg);
+    //             console.log("Error:", msg);
 
-                console.log("@reject")
-                reject(msg);
+    //             console.log("@reject")
+    //             reject(msg);
     
-            }
-        })
-    }
+    //         }
+    //     })
+    // }
     
 
     RED.plugins.registerPlugin("node-red-mcu", {
