@@ -31,6 +31,7 @@ You may follow the build process on the tab `Console Monitor`.
 - [x] Build flows when running Node-RED as service on Raspberry Pi.
 - [x] Include relevant config nodes in the MCU build.
 - [x] Junction node resolving.
+- [x] Link node resolving.
 - [ ] Support for ui_nodes.
 
 ## Test Case

@@ -866,6 +866,7 @@ module.exports = function(RED) {
 
         /***** 
          * Resolve junction node connections to target nodes.
+         * Resolve as well (standard) Link Out/In connections.
          * 
          * This could affect the total number of connection per output.
          * This code as well gets rid of circular references ... in case someone tries to play with the engine ;)
@@ -874,40 +875,40 @@ module.exports = function(RED) {
         let resolver_cache = {};
 
         // initialize the resolver cache
-        nodes.forEach(function(n) {
+        nodes.forEach(function (n) {
             resolver_cache[n.id] = n;
         })
 
-        function resolve_junction_wire(dest, path) {
+        function resolve_wire(dest, path) {
 
             // console.log("...", dest, path);
-            
+
             function getNode(id) {
 
                 // first check the resolver cache
                 let node = resolver_cache[id];
-                
+
                 if (!node) {
 
                     // try to get running instance of this id
                     let n = RED.nodes.getNode(id);
-    
+
                     if (!n) {
                         // That's sh** !
-                        console.log(`Junction Resolver: Couldn't get node definition for #${id}.`)
+                        console.log(`Wires Resolver: Couldn't get node definition for #${id}.`)
                         return;
                     }
-    
+
                     // create representation
                     node = {
                         "id": id,
                         "type": n.type
                     }
-    
+
                     if (n.wires) {
                         node['wires'] = clone(n.wires);
                     }
-    
+
                     resolver_cache[id] = node;
                 }
 
@@ -917,38 +918,55 @@ module.exports = function(RED) {
             let node = getNode(dest);
 
             if (!node) return;
-            if (node.type !== "junction") {
-                // console.log("=> ", dest, "!");
-                return [dest];
+
+            let wires;
+
+            switch (node.type) {
+                case "link in":
+                case "junction":
+
+                    // shall exactly have one output!
+                    if (!node.wires || !Array.isArray(node.wires) || node.wires.length < 1) {
+                        return;     // doesn't hurt
+                    }
+                    if (node.wires.length > 1) {
+                        console.log(`Wires Resolver: Node #${id} (${node.type}) seems to have more than one output?!`);
+                        return;
+                    }
+                    wires = node.wires[0];
+                    break;
+
+                case "link out":
+                    if (node.mode === "link") {
+                        wires = node.links;
+                        if (!wires || !Array.isArray(wires) || wires.length < 1)
+                            return;
+                        break;
+                    }
+                // link.mode == "call" => treat as normal node!
+
+                default:
+                    return [dest];
             }
 
-            // node IS (!) a junction; continue resolving!
-            
-            if (node.wires.length == 0) {
+            // node IS (!) a junction or Link Out/In; continue resolving!
+
+            if (wires.length == 0) {
                 return;
             }
 
             let selfpath = path ? new Set([...path]) : new Set();
             selfpath.add(dest);
 
-            // shall exactly have one output!
-            if (node.wires.length == 0) {
-                return;     // doesn't hurt
-            } else if (node.wires.length > 1) {
-                console.log(`Junction Resolver: Junction #${id} seems to have more than one output?!`);
-                return;
-            }
-
-            let wires = node.wires[0];
             let resolved = [];
 
             // flag if we hit a circular reference from here
             let path_hit = false;
 
-            for (let i=0, l=wires.length; i<l; i++) {
+            for (let i = 0, l = wires.length; i < l; i++) {
 
                 let wire = wires[i];
-                
+
                 // console.log(wire, selfpath);
 
                 if (selfpath.has(wire)) {
@@ -957,7 +975,7 @@ module.exports = function(RED) {
                     continue;   // break the circle reference
                 }
 
-                let res = resolve_junction_wire(wire, selfpath);
+                let res = resolve_wire(wire, selfpath);
                 if (res) {
                     resolved.push(...res);
                 }
@@ -970,20 +988,20 @@ module.exports = function(RED) {
 
         }
 
-        // resolve junction nodes to wires
-        nodes.forEach(function(node) {
-            if (node.type !== "tab" && node.wires) {
+        // resolve junction nodes & link nodes (out -> in) to wires
+        nodes.forEach(function (node) {
+            if (node.type !== "tab" && ("wires" in node)) {
 
                 // console.log("???", node.wires);
 
                 let resolved_wires = [];
-                for (let output=0, l=node.wires.length; output<l; output++) {
+                for (let output = 0, l = node.wires.length; output < l; output++) {
                     let output_wires = new Set();
-                    for (let w=0, lw=node.wires[output].length; w<lw; w++) {
-                        
+                    for (let w = 0, lw = node.wires[output].length; w < lw; w++) {
+
                         // console.log(node.id, "->", node.wires[output][w], "?");
-                        
-                        let rw = resolve_junction_wire(node.wires[output][w]);
+
+                        let rw = resolve_wire(node.wires[output][w]);
 
                         // console.log(node.id, node.wires[output][w], rw);
 
@@ -999,6 +1017,70 @@ module.exports = function(RED) {
                 // console.log("===>>", node.wires);
             }
         });
+
+        // Remove Link Out/In nodes
+        nodes = nodes.filter(function(node) {
+            switch (node.type) {
+                case "link out":
+                    return (node.mode !== "link");
+
+                case "link in":
+
+                    // check if this "link in" node is target of a "link call" node!
+                    for (let i=0, l=nodes.length; i<l; i++) {
+                        let n = nodes[i];
+                        if (n.type === "link call") {
+                            if (n.links && Array.isArray(n.links) && n.links.length>0) {
+                                if (n.links[0] === node.id){
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+
+                    // If not: eliminate!
+                    return false;
+
+                default:
+                    return true;
+            }
+        });
+
+        // function resolve_link_wire(dest, path) {
+
+        // }
+
+        // // resolve link nodes (in -> out) to wires
+        // nodes.forEach(function(node) {
+        //     if (node.type !== "tab" && node.wires) {
+
+        //         // console.log("???", node.wires);
+
+        //         let resolved_wires = [];
+        //         for (let output=0, l=node.wires.length; output<l; output++) {
+        //             let output_wires = new Set();
+        //             for (let w=0, lw=node.wires[output].length; w<lw; w++) {
+                        
+        //                 // console.log(node.id, "->", node.wires[output][w], "?");
+                        
+        //                 let rw = resolve_junction_wire(node.wires[output][w]);
+
+        //                 // console.log(node.id, node.wires[output][w], rw);
+
+        //                 if (rw) {
+        //                     output_wires = new Set([...output_wires, ...rw]);
+        //                 }
+        //             }
+        //             resolved_wires.push([...output_wires]);
+        //         }
+
+        //         node.wires = resolved_wires;
+
+        //         // console.log("===>>", node.wires);
+        //     }
+        // });
+
+
 
         // check if config nodes are referenced
         function test_for_config_node(obj) {
