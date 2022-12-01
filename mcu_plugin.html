@@ -351,7 +351,7 @@
 
         reset() {
             this.#state = true;
-            this.#width = 0;
+            this.set(0);
         }
 
         stop() {
@@ -535,7 +535,6 @@
                     if (res && res.length>1) {
                         progress_bar.set(res[1]);
                     } else {
-                        console.log("ping")
                         progress_bar.ping();
                     }
                 }
