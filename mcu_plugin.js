@@ -1513,8 +1513,13 @@ module.exports = function(RED) {
                     ]
                 } else {
                     bcmds = [
-                        'source $IDF_PATH/export.sh',
-                        cmd
+                        '#!/bin/bash',
+                        'runthis(){',
+                        '   echo "> $@"',
+                        '   eval "$@"',
+                        '}',
+                        'runthis "source $IDF_PATH/export.sh"',
+                        `runthis "${cmd}"`
                     ]
                 }
                 break;
@@ -1565,8 +1570,43 @@ module.exports = function(RED) {
                 break;
             
             case "linux":
-                runner_options["shell"] = "/bin/bash";
+                // runner_options["shell"] = "/bin/bash";
 
+            case "darwin":
+
+                // runner_options["windowsHide"] = true;
+
+                publish_stdout("Creating build script file...")
+                fs.writeFileSync(path.join(make_dir, "build.sh"), bcmds.join("\n"))
+                bcmds = ["./build.sh"];
+
+                run_cmd = filename => new Promise((resolve, reject) => {
+
+                    // publish_stdout(`> ${cmd}`);
+
+                    let builder = execFile("/bin/bash", [filename], runner_options, (err, stdout, stderr) => {
+                        if (err) {
+                            if (err.code == "ABORT_ERR") {
+                                resolve();
+                                return;
+                            }
+                            console.log(err);
+                            reject(err);
+                        }
+                        resolve();
+                    });
+
+                    builder.stdout.on('data', function(data) {
+                        publish_stdout(data); 
+                    });
+                    builder.stderr.on('data', function(data) {
+                        publish_stdout(data); 
+                    });
+
+                });
+                break;
+    
+    
             default:
 
                 bcmds = [bcmds.join(" && ")];
