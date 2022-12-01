@@ -32,7 +32,7 @@
     "x2js": "^3.4.3"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=14.17.0"
   },
   "author": "Ralph Wetzel",
   "license": "MIT",
@@ -41,3 +41,4 @@
   },
   "homepage": "https://github.com/ralphwetzel/node-red-mcu-plugin#readme"
 }
+
