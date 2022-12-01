@@ -7,7 +7,7 @@ const path = require("path");
 const {SerialPort} = require("serialport");
 
 const app_name = "node-red-mcu-plugin";
-const build_cmd = "mcconfig -d -m -p mac"
+// const build_cmd = "mcconfig -d -m -p mac"
 
 const mcuProxy = require("./lib/proxy.js");
 const mcuNodeLibrary = require("./lib/library.js");
@@ -751,6 +751,10 @@ module.exports = function(RED) {
     const routeAuthHandler = RED.auth.needsPermission("mcu.write");
     console.log("MCU loaded.")
 
+    // The (single) promise when running a MCU target
+    let runner_promise;
+    // The AbortController for runner_promise
+    let runner_abort;
 
     function make_build_environment(working_directory, options) {
 
@@ -1377,7 +1381,7 @@ module.exports = function(RED) {
             }
         }
 
-        let shell_options = {
+        let runner_options = {
             "cwd": make_dir,
             "env": env
         };
@@ -1441,22 +1445,29 @@ module.exports = function(RED) {
 
         let run_cmd;
 
+        runner_abort = new AbortController();
+        runner_options["signal"] = runner_abort.signal;
+
         switch (os.platform()) {
             case "win32":
 
-                shell_options["windowsHide"] = true;
+                runner_options["windowsHide"] = true;
 
                 publish_stdout("Creating build batch file...")
                 fs.writeFileSync(path.join(make_dir, "build.bat"), bcmds.join("\r\n"))
                 bcmds = ["build.bat"];
 
-                run_cmd = cmd => new Promise((resolve, reject) => {
+                run_cmd = filename => new Promise((resolve, reject) => {
 
                     publish_stdout(`> ${cmd}`);
 
-                    let builder = execFile(cmd, undefined, shell_options, (err, stdout, stderr) => {
+                    let builder = execFile(filename, undefined, runner_options, (err, stdout, stderr) => {
                         if (err) {
-                            reject(err)
+                            if (err.code == "ABORT_ERR") {
+                                resolve();
+                                return;
+                            }
+                            reject(err);
                         }
                         resolve();
                     });
@@ -1472,7 +1483,8 @@ module.exports = function(RED) {
                 break;
             
             case "linux":
-                shell_options["shell"] = "/bin/bash";
+                runner_options["shell"] = "/bin/bash";
+
             default:
 
                 bcmds = [bcmds.join(" && ")];
@@ -1481,9 +1493,13 @@ module.exports = function(RED) {
 
                     publish_stdout(`> ${cmd}`);
         
-                    let builder = exec(cmd, shell_options, (err, stdout, stderr) => {
+                    let builder = exec(cmd, runner_options, (err, stdout, stderr) => {
                         if (err) {
-                            reject(err)
+                            if (err.code == "ABORT_ERR") {
+                                resolve();
+                                return;
+                            }
+                            reject(err);
                         }
                         resolve();
                     });
@@ -1502,10 +1518,18 @@ module.exports = function(RED) {
         // this can be simplified - as we're meanwhile only running 1-liners
 
         // https://stackoverflow.com/questions/40328932/javascript-es6-promise-for-loop
+        // return new Promise((resolve, reject) => {
+        //     bcmds.reduce( (p, _, i) => 
+        //         p.then(() => run_cmd(bcmds[i])),
+        //         Promise.resolve() )
+        //     .then(() => resolve())
+        //     .catch((err) => reject(err));
+        // });
+
+
         return new Promise((resolve, reject) => {
-            bcmds.reduce( (p, _, i) => 
-                p.then(() => run_cmd(bcmds[i])),
-                Promise.resolve() )
+            Promise.resolve()
+            .then(() => run_cmd(bcmds[0]))
             .then(() => resolve())
             .catch((err) => reject(err));
         });
@@ -1771,6 +1795,15 @@ module.exports = function(RED) {
                 }
                 // ***
 
+
+                // abort the currently running runner
+                if (runner_promise && runner_abort) {
+                    console.log("Aborting...")
+                    runner_abort.abort();
+                    delete runner_promise;
+                    delete runner_abort;
+                }
+
                 // create the proxy to the MCU / Simulator
                 if (proxy) {
                     proxy.disconnect();
@@ -1932,18 +1965,18 @@ module.exports = function(RED) {
                 // })
 
                 try {
-                    build_flows(build_options, RED.comms.publish)
+                    runner_promise = build_flows(build_options, RED.comms.publish)
                     .then( () => {
                         res.status(200).end();
                     })
                     .catch((err) => {
-                        console.log(err);
+                        // console.log(err);
                         RED.comms.publish("mcu/stdout/test", err, false);
                         res.status(400).end();
                     })
                 }
                 catch (err) {
-                    console.log(err);
+                    // console.log(err);
                     RED.comms.publish("mcu/stdout/test", err, false);
                     res.status(400).end();
                 }
