@@ -803,8 +803,10 @@
             // toolbar: footerToolbar,
             enableOnEdit: true,
             // action: "core:show-flow-debugger-tab"
+            onchange: function() {
+                setTimeout(resize_sidebar, 0);
+            }
         });
-
 
         let console_container;
         let config_container;
@@ -1842,7 +1844,7 @@
 
             // this here is for the editableList
             // not nice ... but necessary!
-            setTimeout(resize_sidebar, 500);
+            setTimeout(resize_sidebar, 0);
 
         }
 
