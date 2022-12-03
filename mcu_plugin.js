@@ -1159,6 +1159,12 @@ module.exports = function(RED) {
                     console.log(`Type "${n.type}" = node-red-mcu core node: No manifest added.`);
                     return;
             
+                case "node-red-dashboard":
+                    if (!options.ui) {
+                        throw Error("This flow uses UI nodes - yet UI support is diabled. Please enable UI support.")
+                    }
+
+                    return;
             }
 
             if (manifest.resolver_paths.indexOf(node.path) < 0) {
