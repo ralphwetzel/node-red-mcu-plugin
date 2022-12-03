@@ -1518,10 +1518,10 @@ module.exports = function(RED) {
                     bcmds = [
                         '#!/bin/bash',
                         'runthis(){',
-                        '   echo "> $@"',
+                        '   echo ">> $@"',
                         '   eval "$@"',
                         '}',
-                        'runthis "source $IDF_PATH/export.sh"',
+                        'runthis "source "$IDF_PATH/export.sh""',
                         `runthis "${cmd}"`
                     ]
                 }
@@ -1585,7 +1585,7 @@ module.exports = function(RED) {
 
                 run_cmd = filename => new Promise((resolve, reject) => {
 
-                    // publish_stdout(`> ${cmd}`);
+                    publish_stdout(`> /bin/bash ${filename}`);
 
                     let builder = execFile("/bin/bash", [filename], runner_options, (err, stdout, stderr) => {
                         if (err) {
