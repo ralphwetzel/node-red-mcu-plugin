@@ -2095,14 +2095,12 @@ module.exports = function(RED) {
                         res.status(200).end();
                     })
                     .catch((err) => {
-                        // console.log(err);
-                        RED.comms.publish("mcu/stdout/test", err, false);
+                        RED.comms.publish("mcu/stdout/test", err.toString(), false);
                         res.status(400).end();
                     })
                 }
                 catch (err) {
-                    // console.log(err);
-                    RED.comms.publish("mcu/stdout/test", err, false);
+                    RED.comms.publish("mcu/stdout/test", err.toString(), false);
                     res.status(400).end();
                 }
 
