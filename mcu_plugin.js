@@ -1340,7 +1340,7 @@ module.exports = function(RED) {
         publish_stdout(`Creating build environment for platform ${options.platform}.`)
 
         // Define local dir as working_directory based on options.id
-        const make_dir = path.join(RED.settings.userDir, "mcu-plugin-cache", `config${options.id}`);
+        const make_dir = path.join(RED.settings.userDir, "mcu-plugin-cache", `${options.id}`);
         
         // only preliminary for testing!!
         fs.emptyDirSync(make_dir)
