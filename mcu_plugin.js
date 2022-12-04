@@ -1,6 +1,6 @@
 const clone = require("clone");
 // const { exec } = require('node:child_process'); // <== Node16 
-const { exec, execFile } = require('child_process');  // Node14
+const { exec, execFile, execSync } = require('child_process');  // Node14
 const fs = require('fs-extra');
 const os = require("os");
 const path = require("path");
@@ -113,7 +113,7 @@ function get_require_path(req_path) {
 // Make available the Node-RED typeRegistry 
 
 const typeRegistryPath = get_require_path("node_modules/@node-red/registry");
-console.log(typeRegistryPath);
+// console.log(typeRegistryPath);
 const typeRegistry = require(typeRegistryPath);
 
 // *****
@@ -147,7 +147,7 @@ registryUtil.createNodeApi = patched_createNodeApi
 // *** THIS DOESNT WORK!!
 // We use this patch to get our hand on the full runtime.nodes API
 let orig_copyObjectProperties = registryUtil.copyObjectProperties;
-console.log(orig_copyObjectProperties);
+// console.log(orig_copyObjectProperties);
 
 function patched_copyObjectProperties(src,dst,copyList,blockList) {
 
@@ -163,10 +163,24 @@ function patched_copyObjectProperties(src,dst,copyList,blockList) {
 //
 // *****
 
+// console.log(process.env.PATH)
+// console.log(process.env)
 
 module.exports = function(RED) {
 
-    // console.log(process.env);
+    // Say hello ...
+    try {
+
+        let mcu_dir = path.resolve(__dirname, "./node-red-mcu");
+        let git_describe = "git describe --abbrev=7 --always  --long";
+        let mcu_version = execSync(git_describe, {"cwd": mcu_dir, input: "describe --abbrev=7 --always  --long", encoding: "utf-8"});
+        if (typeof mcu_version == "string" && mcu_version.length > 0) {
+            RED.log.info(`Node-RED MCU Edition Runtime Version: #${mcu_version.trim()}`);
+        }
+        let my_package_json = require("./package.json");
+        RED.log.info(`Node-RED MCU Edition Plugin  Version: v${my_package_json.version}`);
+
+    } catch {}
 
     // *****
     // env variable settings: Ensure ...
@@ -752,7 +766,7 @@ module.exports = function(RED) {
 
     const apiRoot = "/mcu";
     const routeAuthHandler = RED.auth.needsPermission("mcu.write");
-    console.log("MCU loaded.")
+    // console.log("MCU loaded.")
 
     // The (single) promise when running a MCU target
     let runner_promise;
@@ -1755,7 +1769,7 @@ module.exports = function(RED) {
                                 resolve();
                                 return;
                             }
-                            console.log(err);
+                            // console.log(err);
                             reject(err);
                         }
                         resolve();
@@ -1998,7 +2012,7 @@ module.exports = function(RED) {
 
     RED.plugins.registerPlugin("node-red-mcu", {
         onadd: () => {
-            console.log("MCU added.")
+            // console.log("MCU added.")
 
             RED.httpAdmin.post(`${apiRoot}/flows2build`, routeAuthHandler, (req, res) => {
                 if (req.body && req.body.flows2build) {
