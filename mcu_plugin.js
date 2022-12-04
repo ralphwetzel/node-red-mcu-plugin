@@ -1269,8 +1269,8 @@ module.exports = function(RED) {
 
         publish_stdout("Starting build process...")
 
-        publish_stderr(`Host system check: ${os.version()}`);
-        publish_stderr(`HOME directory check: ${os.homedir()}`);
+        publish_stdout(`Host system check: ${os.version()}`);
+        publish_stdout(`HOME directory check: ${os.homedir()}`);
 
         // create flows.json
         // create manifest.json for nodes in flows.json
