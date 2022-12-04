@@ -277,10 +277,10 @@
         pixel: "rgb565le",
         rotation: "0",
         cll: 8192,  // CommandListLength
-        dll: 8192,  // DisplayListLength
+        dll: 8192+4096,  // DisplayListLength
         tc: 1,      // TouchCount
-        px: 120,    // Pixel X
-        py: 16      // Pixel Y
+        px: 240,    // Pixel X / default: Moddable 2
+        py: 320      // Pixel Y / default: Moddable 2
     }
 
     function addConfig() {
@@ -1242,12 +1242,20 @@
 
                         for (key in data) {
                             if (key === "more") continue
-                            else if (key === "debug" || key === "release" || key === "platform") {
+                            else if (["debug", "release", "platform"].includes(key)) {
                                 options[key] = data[key];
                             }
                             else if (key in build_config_default) {
                                 // only forward non-default values
-                                if (data[key] !== build_config_default[key]) {
+                                // & UI support specific values (as they have non-zero like defaults)!
+                                if (["cll", "dll", "tc", "px", "py"].includes(key)) {
+                                    
+                                    let d = parseInt(data[key]);
+                                    if (!Number.isNaN(d)) {
+                                        options[key] = d;
+                                    }
+
+                                } else if (data[key] !== build_config_default[key]) {
                                     options[key] = data[key];
                                 }
                             } else {
@@ -1640,8 +1648,8 @@
                 ui_support.next().css({ "width": "auto" });
 
                 // For today: Disable this!
-                ui_support.typedInput('disable');
-                ui_support.next().find(".red-ui-typedInput-option-label").css({"color": "grey"});
+                // ui_support.typedInput('disable');
+                // ui_support.next().find(".red-ui-typedInput-option-label").css({"color": "grey"});
 
                 // $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
                 rowUI = $('<div>').css({ "margin-top": "8px" }).appendTo(row4).hide();

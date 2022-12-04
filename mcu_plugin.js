@@ -783,6 +783,14 @@ module.exports = function(RED) {
             'RED.build(flows);',
         ]
 
+        let mainjs_ui_end = [
+            'import flows from "flows";',
+            'import buildModel from "./ui_nodes";',
+            'import { REDApplication }  from "./ui_templates";',
+            'RED.build(flows);',
+            'const model = buildModel();',
+            // 'export default new REDApplication(model, { commandListLength:8192, displayListLength:8192+4096, touchCount:1, pixels: 240 * 64 });'
+        ]
         
         // // write manifest_flows.json
         // // to compensate for the situation that we cannot - currently - opt-out the flows.json in the node-red-mcu directory
@@ -837,10 +845,22 @@ module.exports = function(RED) {
         let nodes = [];
         let configNodes = {};
 
+        // Very special node - providing base functionality for dashboard!
+        // This node is not referenced by any other node;
+        // thus we have to catch it when we stumble upon it!
+        let ui_base;
+
         // identify the nodes flagged with _mcu & as well the config nodes
         RED.nodes.eachNode(function(nn) {
 
-            // the "official" test for a config node
+            // Catch ui_base
+            if (nn.type == "ui_base") {
+                ui_base = clone(nn);
+                return;
+            }
+
+            // The "official" test for a config node!
+            // This as well pushes "ui_group" & "ui_tab" nodes into configNodes
             if (!nn.hasOwnProperty('x') && !nn.hasOwnProperty('y')) {
                 configNodes[nn.id] = { "node": clone(nn) };
             }
@@ -1095,8 +1115,11 @@ module.exports = function(RED) {
                     test_for_config_node(ok);
                 } else {
                     if (key!=="id" && key!=="z" && key!=="type" && typeof(ok)==="string" && ok.length == 16) {
-                        if (configNodes[ok]) {
-                            configNodes[ok]["mcu"] = true;
+                        cn = configNodes[ok];
+                        if (cn && (cn.mcu !== true)) {
+                            cn.mcu = true;
+                            // recursion necessary e.g. for ui_nodes
+                            test_for_config_node(cn);
                         }
                     }        
                 }
@@ -1122,6 +1145,8 @@ module.exports = function(RED) {
             }
         }
 
+        let ui_support_demand_confirmed = false;
+
         nodes.forEach(function(n) {
 
             // clean the config from the _mcu flag
@@ -1135,36 +1160,38 @@ module.exports = function(RED) {
 
             let module = node.module;
             if (!module) return;
-
             
-            switch (module) {
-                case "node-red":
-                    switch(n.type) {
-                        case "trigger":
-                            // let module = "@node-red/nodes/core/function/trigger";       // predefined template
-                            // let mp = manifest.from_template(module, dest)
-                            // if (mp && typeof(mp) === "string") {
-                            //     manifest.include_manifest(mp);
-                            // }
-                            // return;
-                            manifest.include_manifest("$(MCUROOT)/nodes/trigger/manifest.json");
-                            break;
+            if (module === "node-red") {
+                switch(n.type) {
+                    case "trigger":
+                        // let module = "@node-red/nodes/core/function/trigger";       // predefined template
+                        // let mp = manifest.from_template(module, dest)
+                        // if (mp && typeof(mp) === "string") {
+                        //     manifest.include_manifest(mp);
+                        // }
+                        // return;
+                        manifest.include_manifest("$(MCUROOT)/nodes/trigger/manifest.json");
+                        break;
 
-                        default:
-                            console.log(`Type "${n.type}" = Node-RED core node: No manifest added.`);
-                    }
-                    return;
+                    default:
+                        console.log(`Type "${n.type}" = Node-RED core node: No manifest added.`);
+                }
+                return;
 
-                case "node-red-node-pi-gpio":
-                    console.log(`Type "${n.type}" = node-red-mcu core node: No manifest added.`);
-                    return;
-            
-                case "node-red-dashboard":
-                    if (!options.ui) {
-                        throw Error("This flow uses UI nodes - yet UI support is diabled. Please enable UI support.")
-                    }
+            } else if (module === "node-red-node-pi-gpio") {
+                console.log(`Type "${n.type}" = node-red-mcu core node: No manifest added.`);
+                return;
 
-                    return;
+            } else if (module === "node-red-dashboard") {
+                if (!options.ui) {
+                    throw Error("This flow uses UI nodes - yet UI support is diabled. Please enable UI support.")
+                }
+
+                ui_support_demand_confirmed = true;
+                return;
+
+            } else if (module.indexOf("node-red-node-ui-") === 0) {
+                throw Error(`Node type '${module}' currently not supported on MCU.`)
             }
 
             if (manifest.resolver_paths.indexOf(node.path) < 0) {
@@ -1184,6 +1211,155 @@ module.exports = function(RED) {
 
         });
 
+        // remove the standard (definition of) flows,json
+        // let obsolete_flows_path = path.join(path.dirname(rmp), "flows.json");
+        // obsolete_flows_path = obsolete_flows_path.slice(0, -path.extname(obsolete_flows_path).length)
+        // "~" => exclude from build!
+        // manifest.add_module(obsolete_flows_path, "~")
+        // manifest.add_module({
+        //     source: "$(MCUROOT)/flows",
+        //     transform: "nodered2mcu"
+        // }, "~");
+
+        // UI_Nodes support
+        if (ui_support_demand_confirmed && options.ui) {
+
+            // add ui_base node to the group of nodes to be exported!
+            if (!ui_base) {
+
+                // There might be situations where ui_base was deleted in the editor;
+                // rather than throwing here, we try to create a minimal / standard replacement node
+
+                ui_base = {
+                    id: RED.nodes.id(),
+                    type: "ui_base",
+                    theme: {
+                        name: "theme-dark",
+                        lightTheme: {
+                            default: "#0094CE",
+                            baseColor: "#0094CE",
+                            baseFont: "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+                            edited: true,
+                            reset: false
+                        },
+                        darkTheme: {
+                            default: "#097479",
+                            baseColor: "#097479",
+                            baseFont: "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+                            edited: true,
+                            reset: false
+                        },
+                        themeState: {
+                            "base-color": {
+                                default: "#097479",
+                                value: "#097479",
+                                edited: false
+                            },
+                            "page-titlebar-backgroundColor": {
+                                value: "#097479",
+                                edited: false
+                            },
+                            "page-backgroundColor": {
+                                value: "#111111",
+                                edited: false
+                            },
+                            "page-sidebar-backgroundColor": {
+                                value: "#333333",
+                                edited: false
+                            },
+                            "group-textColor": {
+                                value: "#0eb8c0",
+                                edited: false
+                            },
+                            "group-borderColor": {
+                                value: "#555555",
+                                edited: false
+                            },
+                            "group-backgroundColor": {
+                                value: "#333333",
+                                edited: false
+                            },
+                            "widget-textColor": {
+                                value: "#eeeeee",
+                                edited: false
+                            },
+                            "widget-backgroundColor": {
+                                value: "#097479",
+                                edited: false
+                            },
+                            "widget-borderColor": {
+                                value: "#333333",
+                                edited: false
+                            },
+                            "base-font": {
+                                value: "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+                            }
+                        },
+                        angularTheme: {
+                            primary: "indigo",
+                            accents: "blue",
+                            warn: "red",
+                            background: "grey",
+                            palette: "dark"
+                        }
+                    },
+                    site: {
+                        name: "Node-RED Dashboard",
+                        hideToolbar: "false",
+                        allowSwipe: "false",
+                        lockMenu: "false",
+                        allowTempTheme: "none",
+                        dateFormat: "DD.MM.YYYY",
+                        sizes: {
+                            sx: 48,
+                            sy: 48,
+                            gx: 6,
+                            gy: 6,
+                            cx: 6,
+                            cy: 6,
+                            px: 0,
+                            py: 0
+                        }
+                    }
+                }
+
+            }
+
+            nodes.push(ui_base);
+
+            // Dedicated includes
+            manifest.include_manifest("$(MCUROOT)/nodes/ui/manifest.json");
+
+            // @ToDo: Check if really necessary!
+            manifest.include_manifest("$(MCUROOT)/nodes/random/manifest.json");
+            manifest.include_manifest("$(MCUROOT)/nodes/trigger/manifest.json");
+
+            // Dedicated main.js
+            mainjs.push(...mainjs_ui_end);
+            
+            // console.log(options);
+
+            let app_options = {
+                commandListLength: options.cll,
+                displayListLength: options.dll,
+                touchCount: options.tc,
+                pixels: options.px * options.py
+            }
+
+            mainjs.push(`export default new REDApplication(model, ${JSON.stringify(app_options)});`);
+        } else {
+            mainjs.push(...mainjs_end);
+        }
+
+        // Write the main.js file
+        fs.writeFileSync(path.join(dest, "main.js"), mainjs.join("\r\n"), (err) => {
+            if (err) {
+                throw err;
+            }
+        });
+
+        manifest.add_module("./main")
+
         // In case this is going to be changed again ;)
         let flows_file_data = JSON.stringify(nodes, null, 2)
         let flows_file_name = "flows.json"
@@ -1198,26 +1374,6 @@ module.exports = function(RED) {
         // add our flows.json
         manifest.add_module({"source": "./flows", "transform": "nodered2mcu"})
         // manifest.add_preload("flows");
-
-        // remove the standard (definition of) flows,json
-        // let obsolete_flows_path = path.join(path.dirname(rmp), "flows.json");
-        // obsolete_flows_path = obsolete_flows_path.slice(0, -path.extname(obsolete_flows_path).length)
-        // "~" => exclude from build!
-        // manifest.add_module(obsolete_flows_path, "~")
-        // manifest.add_module({
-        //     source: "$(MCUROOT)/flows",
-        //     transform: "nodered2mcu"
-        // }, "~");
-
-        // Write the main.js file
-        mainjs.push(...mainjs_end);
-        fs.writeFileSync(path.join(dest, "main.js"), mainjs.join("\r\n"), (err) => {
-            if (err) {
-                throw err;
-            }
-        });
-
-        manifest.add_module("./main")
 
         if (options?.creation) {
             let c = JSON.parse(options.creation)
