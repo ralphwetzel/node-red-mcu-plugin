@@ -166,6 +166,8 @@ function patched_copyObjectProperties(src,dst,copyList,blockList) {
 // console.log(process.env.PATH)
 // console.log(process.env)
 
+let __VERSIONS__ = {};
+
 module.exports = function(RED) {
 
     // Say hello ...
@@ -175,10 +177,12 @@ module.exports = function(RED) {
         let git_describe = "git describe --abbrev=7 --always  --long";
         let mcu_version = execSync(git_describe, {"cwd": mcu_dir, input: "describe --abbrev=7 --always  --long", encoding: "utf-8"});
         if (typeof mcu_version == "string" && mcu_version.length > 0) {
-            RED.log.info(`Node-RED MCU Edition Runtime Version: #${mcu_version.trim()}`);
+            __VERSIONS__['runtime'] = mcu_version.trim();
+            RED.log.info(`Node-RED MCU Edition Runtime Version: #${__VERSIONS__.runtime}`);
         }
         let my_package_json = require("./package.json");
-        RED.log.info(`Node-RED MCU Edition Plugin  Version: v${my_package_json.version}`);
+        __VERSIONS__['plugin'] = my_package_json.version;
+        RED.log.info(`Node-RED MCU Edition Plugin  Version: v${__VERSIONS__.plugin}`);
 
     } catch {}
 
@@ -235,6 +239,16 @@ module.exports = function(RED) {
         }
     }
 
+    // Try to get the version number of the MODDABLE SDK
+    try {
+
+        let git_describe = "git describe --abbrev=7 --always  --long";
+        let moddable_version = execSync(git_describe, {"cwd": MODDABLE, input: "describe --abbrev=7 --always  --long", encoding: "utf-8"});
+        if (typeof moddable_version == "string" && moddable_version.length > 0) {
+            __VERSIONS__['moddable'] = moddable_version.trim();
+            RED.log.info(`Moddable SDK Version: v${__VERSIONS__.moddable}`);
+        }
+    } catch {}
 
     // ...that $IDF_PATH is defined
 
@@ -1440,6 +1454,7 @@ module.exports = function(RED) {
         publish_stdout("Starting build process...")
 
         publish_stdout(`Host system check: ${os.version()}`);
+        publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable}` );
         publish_stdout(`HOME directory check: ${os.homedir()}`);
 
         // create flows.json
