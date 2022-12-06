@@ -276,11 +276,11 @@
         ui: false,
         pixel: "rgb565le",
         rotation: "0",
-        cll: 8192,  // CommandListLength
-        dll: 8192+4096,  // DisplayListLength
+        cll: 4096,  // CommandListLength
+        dll: 8192,  // DisplayListLength
         tc: 1,      // TouchCount
-        px: 240,    // Pixel X / default: Moddable 2
-        py: 320      // Pixel Y / default: Moddable 2
+        px: 240,    // Size of render buffer; 
+        py: 32      // see: https://github.com/phoddie/node-red-mcu/discussions/27#discussioncomment-4317840
     }
 
     function addConfig() {
@@ -1750,7 +1750,7 @@
 
                 $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(rowUI);
 
-                $('<div class="mcu-build-option-label">').text("Pixels:").appendTo(rowUI);
+                $('<div class="mcu-build-option-label">').text("Render Buffer Size:").appendTo(rowUI);
                 let pixelsX = $('<input>').appendTo(rowUI)
                 pixelsX.typedInput({
                     type: "num"
