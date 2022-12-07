@@ -1257,6 +1257,12 @@ module.exports = function(RED) {
         //     transform: "nodered2mcu"
         // }, "~");
 
+
+        // Check if there is any node to be build
+        if (nodes.length < 1) {
+            throw Error("No flow to build.")
+        }
+
         // UI_Nodes support
         if (ui_support_demand_confirmed && options.ui) {
 
@@ -1544,7 +1550,12 @@ module.exports = function(RED) {
         // only preliminary for testing!!
         fs.emptyDirSync(make_dir)
 
-        make_build_environment(make_dir, options);
+        try {
+            make_build_environment(make_dir, options);
+        } catch (err) {
+            publish_stderr(err.toString());
+            return Promise.reject(err);
+        }
 
         publish_stdout(`Working directory: ${make_dir}`);
 
