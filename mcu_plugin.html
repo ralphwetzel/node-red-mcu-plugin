@@ -1332,6 +1332,10 @@
                                             build(data);
                                         }
                                         RED.events.on("deploy", builder);
+                                        // @ToDo:
+                                        // If there's a deploy issue (e.g. unused config node),
+                                        // this timeout cancels the build process too early.
+                                        // Needs to be fixed...
                                         setTimeout(function () {
                                             RED.events.off("deploy", builder);
                                         }, 1000);
@@ -1340,7 +1344,6 @@
                                 {
                                     text: "Cancel",
                                     click: function (e) {
-                                        $(b).prop("checked", false);
                                         notify_deploy.close();
                                         return;
                                     }
