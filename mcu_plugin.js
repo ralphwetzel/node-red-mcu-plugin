@@ -15,6 +15,14 @@ const mcuManifest = require("./lib/manifest.js");
 
 // const {getPersistentShell} = require('./lib/persistent-shell');
 
+// ***** AbortController
+// node@14: Established w/ 14.17; polyfill to be sure
+// node@16+: Fully integrated
+if (!globalThis.AbortController) {
+    const { AbortController } = require("node-abort-controller");
+    globalThis.AbortController = AbortController;
+}
+
 // https://github.com/stefanpenner/resolve-package-path
 const resolve_package_path = require('resolve-package-path')
 

@@ -29,7 +29,8 @@
     "nanoid": "<4",
     "resolve-package-path": "^4.0.3",
     "serialport": "^10.4.0",
-    "x2js": "^3.4.3"
+    "x2js": "^3.4.3",
+    "node-abort-controller": "^3.0.0"
   },
   "engines": {
     "node": ">=14.17.0"
