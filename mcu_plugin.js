@@ -1740,6 +1740,14 @@ module.exports = function(RED) {
         switch (os.platform()) {
             case "win32":
 
+                // idf_tool.py generates PYTHON_PLATFORM as "platform.system() + '-' + platform.machine()".
+                // platform.machine() operates w/ $PROCESSOR_ARCHITECTURE as fallback value.
+                // Reference: https://github.com/python/cpython/blob/d92407ed497e3fc5acacb0294ab6095013e600f4/Lib/platform.py#L763-L788
+                // If $PROCESSOR_ARCHITECTURE is not defined, platform.machine() will / could return "" & ...
+                // the build process (potentially) terminate with "ERROR: Platform Windows- appears to be unsupported".
+                // Thus offer $PROCESSOR_ARCHITECTURE in the build env:
+                env["PROCESSOR_ARCHITECTURE"] = process.env["PROCESSOR_ARCHITECTURE"];
+
                 runner_options["windowsHide"] = true;
 
                 publish_stdout("Creating build batch file...")
