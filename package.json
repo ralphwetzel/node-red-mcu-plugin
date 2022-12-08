@@ -1,6 +1,6 @@
 {
   "name": "@ralphwetzel/node-red-mcu-plugin",
-  "version": "0.3.1",
+  "version": "1.0.0-rc.1",
   "description": "Plugin to support the Node-RED implementation for Microcontrollers",
   "node-red": {
     "version": ">=2.0.0 <=3.0.2",
@@ -24,7 +24,6 @@
   "dependencies": {
     "clone": "^2.1.2",
     "fs-extra": "^10.1.0",
-    "loglevel": "^1.8.0",
     "log4js": "^6.7.0",
     "nanoid": "<4",
     "resolve-package-path": "^4.0.3",

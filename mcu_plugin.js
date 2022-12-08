@@ -7,13 +7,10 @@ const path = require("path");
 const {SerialPort} = require("serialport");
 
 const app_name = "node-red-mcu-plugin";
-// const build_cmd = "mcconfig -d -m -p mac"
 
 const mcuProxy = require("./lib/proxy.js");
 const mcuNodeLibrary = require("./lib/library.js");
 const mcuManifest = require("./lib/manifest.js");
-
-// const {getPersistentShell} = require('./lib/persistent-shell');
 
 // ***** AbortController
 // node@14: Established w/ 14.17; polyfill to be sure
@@ -121,7 +118,6 @@ function get_require_path(req_path) {
 // Make available the Node-RED typeRegistry 
 
 const typeRegistryPath = get_require_path("node_modules/@node-red/registry");
-// console.log(typeRegistryPath);
 const typeRegistry = require(typeRegistryPath);
 
 // *****
@@ -137,16 +133,12 @@ const orig_createNodeApi = registryUtil.createNodeApi;
 function patched_createNodeApi(node) {
 
     if (node.file.indexOf("mcu_plugin.js") >= 0) {
-        // console.log(node.namespace, node.file, node.id)
-        // console.log(node);
     } else {
         if (node.types) {
             library.register_node(node);
         }
-        // console.log(node.namespace, node.file, node.id)
     }
 
-    // console.log(node.file);
     return orig_createNodeApi(node);
 }
 registryUtil.createNodeApi = patched_createNodeApi
@@ -171,13 +163,11 @@ function patched_copyObjectProperties(src,dst,copyList,blockList) {
 //
 // *****
 
-// console.log(process.env.PATH)
-// console.log(process.env)
-
 let __VERSIONS__ = {};
 
 module.exports = function(RED) {
 
+    // *****
     // Say hello ...
     try {
 
@@ -194,11 +184,13 @@ module.exports = function(RED) {
 
     } catch {}
 
+    // End: Say hello...
+    // *****
+
+
     // *****
     // env variable settings: Ensure ...
     
-    // let IDF_PATH;
-
     // ... that $MODDABLE is defined.
     const MODDABLE = process.env.MODDABLE;
     
@@ -258,51 +250,9 @@ module.exports = function(RED) {
         }
     } catch {}
 
-    // ...that $IDF_PATH is defined
-
-    // const IDF_PATH = process.env.IDF_PATH;
-
-    // if (!IDF_PATH) {
-        
-    //     // Try to find IDF_PATH
-
-    //     // ToDo: This is valid (confirmed) only for ESP32 & Linux.
-    //     // Implement/confirm for the other targets & platforms (mac, win) as well!
-
-    //     let HOME = process.env.HOME;
-    //     if (HOME) {
-    //         let idf_options = [
-    //             `${HOME}/esp32/esp-idf`,
-    //             `${HOME}/.local/share/esp32/esp-idf`
-    //         ]
-    
-    //         for (let i=0; i<idf_options.length; i+=1) {
-    //             if (fs.existsSync(idf_options[i])) {
-    //                 process.env.IDF_PATH = idf_options[i];
-    //             }
-    //         }
-    //     }
-    // }
-
-    // if (!IDF_PATH) {
-    //     RED.log.error("*** node-red-mcu-plugin -> Error!");
-    //     RED.log.error("* Environment variable $IDF_PATH is not defined.");
-    //     RED.log.error("* Please refer to our documentation for further support.");
-    //     RED.log.error("*** node-red-mcu-plugin -> Runtime setup canceled.");
-    //     return;
-    // }
-
-    // // ... that $IDF_PATH declares a valid path.
-    // if (!fs.existsSync(IDF_PATH)) {
-    //     RED.log.error("*** node-red-mcu-plugin -> Error!");
-    //     RED.log.error("* Environment variable $IDF_PATH is stating a non-existing path:");
-    //     RED.log.error(`* process.env.IDF_PATH = "${IDF_PATH}"`);
-    //     RED.log.error("*** node-red-mcu-plugin -> Runtime setup canceled.");
-    //     return;
-    // }
-    
     // End: "env variable settings ..."
     // *****
+
 
     // *****
     // Hook node definitions
@@ -312,15 +262,14 @@ module.exports = function(RED) {
         let node = this;
         node.on('input', function(msg, send, done) {
 
-            console.log("@input")
             if (proxy) {
                 proxy.send2mcu("inject", this.z, this.id);
             }
             return;
         });
     }
-    RED.nodes.registerType("__mcu*inject", mcu_inject);
-    registerMCUModeType("inject", "__mcu*inject")
+    RED.nodes.registerType("_mcu:inject", mcu_inject);
+    registerMCUModeType("inject", "_mcu:inject")
 
     function mcu_debug(config) {
 
@@ -355,9 +304,8 @@ module.exports = function(RED) {
         }
         return dn;
     }
-    RED.nodes.registerType("__mcu*debug", mcu_debug);
-    // registerMCUModeType("debug", "debug")
-    registerMCUModeType("debug", "__mcu*debug")
+    RED.nodes.registerType("_mcu:debug", mcu_debug);
+    registerMCUModeType("debug", "_mcu:debug")
 
     // We use this node if no replacement is defined.
     // This gives us access to the basic functionality of a node, like emitting warnings & errors.
@@ -370,15 +318,14 @@ module.exports = function(RED) {
 
         RED.nodes.createNode(this, config);
     }
-    RED.nodes.registerType("__mcu*void", mcu_void);
-
+    RED.nodes.registerType("_mcu:void", mcu_void);
 
     // End "Hook ..."
     // *****
 
 
     // *****
-    // Calculate path to flowUtil (lib/flows/util.js" & require it
+    // Calculate path to flowUtil (lib/flows/util.js) & require it
 
     let flowUtilPath = get_require_path("node_modules/@node-red/runtime/lib/flows/util.js")
     if (!flowUtilPath) return;
@@ -388,9 +335,9 @@ module.exports = function(RED) {
     // End "Calculate ..."
     // *****
 
+
     // *****
     // Apply a patch to hook into the node creation process of the runtime.
-
 
     function getProxy() {
         if (proxy) return proxy;
@@ -399,56 +346,21 @@ module.exports = function(RED) {
     let orig_createNode = flowUtil.createNode;
     function patched_createNode(flow,config) {
 
-       // console.log("@patch");
-
-        // console.log(config);
-
-        // replacement table NR=>MCU
-        /*
-        let replace = {
-            'inject': '__mcu*inject',
-            'debug': 'debug'
-        }
-        */
-
-        /*
-        if (flows2build) {
-            for (let i=0; i<flows2build.length; i+=1) {
-                if (config.z === flows2build[i]) {
-
-                    if (config.type && replace[config.type]) {
-                        config.type = replace[config.type]
-                        console.log("replacing " + config.id)
-                        break;
-                    }
-
-                    // if no replacement node defined: Don't create any node!
-                    console.log("voiding " + config.id)
-                    return;
-                }
-            }    
-        }
-*/
-
         let orig_type = config.type;
 
         if (config._mcu?.mcu === true) {
-            console.log("@mcu");
             if (config.type) {
                 let t = library.get_mcumode_type(config.type)
-                // console.log(t);
                 if (t) {
+                    // replacing original node w/ _mcu:... node
                     config.type = t;
-                    console.log("replacing " + config.id + " w/ " + t)
-                } else {
 
+                } else {
                     // if no replacement node defined: Save the original type in config.void...
                     config.void = config.type;
                     // ... and create the void replacement node!
-                    config.type = "__mcu*void";
+                    config.type = "_mcu:void";
 
-                    console.log("voiding " + config.id)
-                    // return;
                 }
             }
         }
@@ -463,33 +375,24 @@ module.exports = function(RED) {
         return node;
     }
 
+    // Only for debugging
     let orig_diffConfigs = flowUtil.diffConfigs;
     function patched_diffConfigs(oldConfig, newConfig) {
-        
-        // console.log(oldConfig, newConfig);
-        
         let res = orig_diffConfigs(oldConfig, newConfig);
-        console.log("diffConfigs", res);
+        // console.log("diffConfigs", res);
         return res;
     }
 
     let orig_diffNodes = flowUtil.diffNodes;
     function patched_diffNodes(oldNode,newNode) {
-
         let res = orig_diffNodes(oldNode,newNode);
-        console.log("diffNodes", res);
+       // console.log("diffNodes", res);
         return res;
     }
-
     
-    
-    // console.log("patching flowUtil")
     flowUtil.createNode = patched_createNode;
     flowUtil.diffNodes = patched_diffNodes;
     flowUtil.diffConfigs = patched_diffConfigs;
-
-    // console.log(flowUtil.diffNodes.toString());
-
 
     // End "Apply..."
     // *****
@@ -535,7 +438,7 @@ module.exports = function(RED) {
         try {
             cache_data = fs.readFileSync(cache_file, 'utf8');
         } catch (err) {
-            RED.log.error("node-red-mcu-plugin: Failed to open cache file @ " + cache_file);
+            RED.log.error(`${app_name}: Failed to open cache file @ ${cache_file}.`);
         } finally {
             cache_data = (cache_data.length > 0) ? cache_data : "[]"
         }
@@ -543,28 +446,24 @@ module.exports = function(RED) {
         try {
             cache_data = JSON.parse(cache_data) || {};
         } catch (err) {
-            RED.log.warn("node-red-mcu-plugin: Cache file corrupted @ " + cache_file);
+            RED.log.warn(`${app_name}: Cache file corrupted @ ${cache_file}.`);
         }
 
         mcu_plugin_config.cache_file = cache_file;
         mcu_plugin_config.cache_data = cache_data;
-
     }
 
-
     function persist_cache(data) {
-        // console.log("persist_cache", data)
         if (!data) {
             data = mcu_plugin_config.cache_data;
         } else {
             mcu_plugin_config.cache_data = data;
         }
-        // console.log("cache_data", mcu_plugin_config.cache_data);
 
         let cache_data = JSON.stringify(data);
         fs.writeFile(mcu_plugin_config.cache_file, cache_data, err => {
             if (err) {
-                RED.log.warn("node-red-mcu-plugin: Failed to persist config to cache @ " + mcu_plugin_config.cache_file);
+                RED.log.warn(`${app_name}: Failed to persist config to cache @ ${mcu_plugin_config.cache_file}.`);
             }
         })
     }
@@ -677,7 +576,7 @@ module.exports = function(RED) {
                     platforms.push({value: p})
                 } else {
                     if (opener) {
-                        RED.log.info("*** node-red-mcu-plugin:");
+                        RED.log.info(`*** ${app_name}:`);
                         RED.log.info("It looks as if a new platform option has been added.");
                         RED.log.info("Please raise an issue @ our GitHub repository, stating the following information:");
                         opener = false;
@@ -689,7 +588,7 @@ module.exports = function(RED) {
         opener = true;
         for (let i=0; i<platforms_verified.length; i+=1) {
             if (opener) {
-                RED.log.info("*** node-red-mcu-plugin:");
+                RED.log.info(`*** ${app_name}:`);
                 RED.log.info("It looks as if a platform option has been removed.");
                 RED.log.info("Please raise an issue @ our GitHub repository, stating the following information:");
                 opener = false;
@@ -697,7 +596,7 @@ module.exports = function(RED) {
             RED.log.info(`> Verify platform: ${platforms_verified[i]}`);
             platform_identifiers.splice(platform_identifiers.indexOf(platforms_verified[i]), 1);
         }
-        // console.log(platform_identifiers);
+
         mcu_plugin_config.platforms = platforms;
     }
 
@@ -724,7 +623,7 @@ module.exports = function(RED) {
             if (p1[i] !== "modules") {
                 if (!simulator_identifiers[id]) {
                     if (opener) {
-                        RED.log.info("*** node-red-mcu-plugin:");
+                        RED.log.info(`*** ${app_name}:`);
                         RED.log.info("There seems to be an additional simulator option available.");
                         RED.log.info("Please raise an issue @ our GitHub repository, stating the following information:");
                         opener = false;    
@@ -740,7 +639,7 @@ module.exports = function(RED) {
         opener = true;
         for (let i=0; i<sims_verified.length; i+=1) {
             if (opener) {
-                RED.log.info("*** node-red-mcu-plugin:");
+                RED.log.info(`*** ${app_name}:`);
                 RED.log.info("It looks as if a simulator option has been removed.");
                 RED.log.info("Please raise an issue @ our GitHub repository, stating the following information:");
                 opener = false;
@@ -749,7 +648,6 @@ module.exports = function(RED) {
             delete simulator_identifiers[sims_verified[i]];
         }
 
-        // console.log(simulator_identifiers);
         mcu_plugin_config.platforms = platforms;
     }
 
@@ -788,7 +686,6 @@ module.exports = function(RED) {
 
     const apiRoot = "/mcu";
     const routeAuthHandler = RED.auth.needsPermission("mcu.write");
-    // console.log("MCU loaded.")
 
     // The (single) promise when running a MCU target
     let runner_promise;
@@ -803,19 +700,10 @@ module.exports = function(RED) {
 
 
         let mainjs = [
-            // 'import Modules from "modules";',
-            // 'globalThis.Modules = Modules;',
-            // 'globalThis.require = Modules.importNow;',
-            // 'function require(_path) {',
-            // 'trace("@require")',
-            // '}',
-            // 'globalThis.require = require;',
             'import "nodered";	// import for global side effects',
-            // 'trace("pre", "\\n");',
         ];
         let mainjs_end = [
             'import flows from "flows";',
-            // 'trace("post", "\\n");',
             'RED.build(flows);',
         ]
 
@@ -828,26 +716,8 @@ module.exports = function(RED) {
             // 'export default new REDApplication(model, { commandListLength:8192, displayListLength:8192+4096, touchCount:1, pixels: 240 * 64 });'
         ]
         
-        // // write manifest_flows.json
-        // // to compensate for the situation that we cannot - currently - opt-out the flows.json in the node-red-mcu directory
-        // mf = {
-        //     "modules": {
-        //         "*": [{ 
-        //                 "source": "./flows",
-        //                 "transform": "nodered2mcu"
-        //             }]
-        //     }
-        // }
-
-        // fs.writeFileSync(path.join(dest, "manifest_flows.json"), JSON.stringify(mf, null, "  "), (err) => {
-        //     if (err) {
-        //         throw err;
-        //     }
-        // });
-
         // Create and initialize the manifest builder
         let mcu_nodes_root = path.resolve(__dirname, "./mcu_modules");
-        // console.log(mcu_nodes_root);
         let manifest = new mcuManifest.builder(library, mcu_nodes_root);
         manifest.initialize();
 
@@ -857,10 +727,6 @@ module.exports = function(RED) {
         ]
 
         // Try to make this the first entry - before the includes!
-
-        // Add our flows.json
-        // manifest.add_module({"source": "./flows", "transform": "nodered2mcu"})
-        // manifest.include_manifest("./manifest_flows.json");
 
         // Add MODULES build path
         const mbp = path.resolve(MODDABLE, "./modules");
@@ -882,10 +748,6 @@ module.exports = function(RED) {
                 manifest.include_manifest(pmp);
             }
         }
-
-        // manifest.add_module("$(MCUROOT)/main")
-
-        // manifest.include_manifest("./manifest_flows.json");
 
         // Make the flows.json file & add manifests of the nodes
         let nodes = [];
@@ -950,8 +812,6 @@ module.exports = function(RED) {
 
         function resolve_wire(dest, path) {
 
-            // console.log("...", dest, path);
-
             function getNode(id) {
 
                 // first check the resolver cache
@@ -1012,7 +872,7 @@ module.exports = function(RED) {
                             return;
                         break;
                     }
-                // link.mode == "call" => treat as normal node!
+                    // link.mode == "call" => treat as normal node!
 
                 default:
                     return [dest];
@@ -1036,10 +896,7 @@ module.exports = function(RED) {
 
                 let wire = wires[i];
 
-                // console.log(wire, selfpath);
-
                 if (selfpath.has(wire)) {
-                    // console.log("xxx", wire);
                     path_hit = true;
                     continue;   // break the circle reference
                 }
@@ -1061,19 +918,12 @@ module.exports = function(RED) {
         nodes.forEach(function (node) {
             if (node.type !== "tab" && ("wires" in node)) {
 
-                // console.log("???", node.wires);
-
                 let resolved_wires = [];
                 for (let output = 0, l = node.wires.length; output < l; output++) {
                     let output_wires = new Set();
                     for (let w = 0, lw = node.wires[output].length; w < lw; w++) {
 
-                        // console.log(node.id, "->", node.wires[output][w], "?");
-
                         let rw = resolve_wire(node.wires[output][w]);
-
-                        // console.log(node.id, node.wires[output][w], rw);
-
                         if (rw) {
                             output_wires = new Set([...output_wires, ...rw]);
                         }
@@ -1083,7 +933,6 @@ module.exports = function(RED) {
 
                 node.wires = resolved_wires;
 
-                // console.log("===>>", node.wires);
             }
         });
 
@@ -1114,42 +963,6 @@ module.exports = function(RED) {
                     return true;
             }
         });
-
-        // function resolve_link_wire(dest, path) {
-
-        // }
-
-        // // resolve link nodes (in -> out) to wires
-        // nodes.forEach(function(node) {
-        //     if (node.type !== "tab" && node.wires) {
-
-        //         // console.log("???", node.wires);
-
-        //         let resolved_wires = [];
-        //         for (let output=0, l=node.wires.length; output<l; output++) {
-        //             let output_wires = new Set();
-        //             for (let w=0, lw=node.wires[output].length; w<lw; w++) {
-                        
-        //                 // console.log(node.id, "->", node.wires[output][w], "?");
-                        
-        //                 let rw = resolve_junction_wire(node.wires[output][w]);
-
-        //                 // console.log(node.id, node.wires[output][w], rw);
-
-        //                 if (rw) {
-        //                     output_wires = new Set([...output_wires, ...rw]);
-        //                 }
-        //             }
-        //             resolved_wires.push([...output_wires]);
-        //         }
-
-        //         node.wires = resolved_wires;
-
-        //         // console.log("===>>", node.wires);
-        //     }
-        // });
-
-
 
         // check if config nodes are referenced
         function test_for_config_node(obj) {
@@ -1210,22 +1023,17 @@ module.exports = function(RED) {
             if (module === "node-red") {
                 switch(n.type) {
                     case "trigger":
-                        // let module = "@node-red/nodes/core/function/trigger";       // predefined template
-                        // let mp = manifest.from_template(module, dest)
-                        // if (mp && typeof(mp) === "string") {
-                        //     manifest.include_manifest(mp);
-                        // }
-                        // return;
                         manifest.include_manifest("$(MCUROOT)/nodes/trigger/manifest.json");
                         break;
 
                     default:
-                        console.log(`Type "${n.type}" = Node-RED core node: No manifest added.`);
+                        // Not adding any additional manifest for Node-RED core nodes.
+                        break;
                 }
                 return;
 
             } else if (module === "node-red-node-pi-gpio") {
-                console.log(`Type "${n.type}" = node-red-mcu core node: No manifest added.`);
+                // Not adding any manifest for node-red-mcu core nodes.
                 return;
 
             } else if (module === "node-red-dashboard") {
@@ -1256,17 +1064,6 @@ module.exports = function(RED) {
             }
 
         });
-
-        // remove the standard (definition of) flows,json
-        // let obsolete_flows_path = path.join(path.dirname(rmp), "flows.json");
-        // obsolete_flows_path = obsolete_flows_path.slice(0, -path.extname(obsolete_flows_path).length)
-        // "~" => exclude from build!
-        // manifest.add_module(obsolete_flows_path, "~")
-        // manifest.add_module({
-        //     source: "$(MCUROOT)/flows",
-        //     transform: "nodered2mcu"
-        // }, "~");
-
 
         // Check if there is any node to be build
         if (nodes.length < 1) {
@@ -1389,8 +1186,6 @@ module.exports = function(RED) {
             // Dedicated main.js
             mainjs.push(...mainjs_ui_end);
             
-            // console.log(options);
-
             let app_options = {
                 commandListLength: options.cll,
                 displayListLength: options.dll,
@@ -1425,7 +1220,6 @@ module.exports = function(RED) {
 
         // add our flows.json
         manifest.add_module({"source": "./flows", "transform": "nodered2mcu"})
-        // manifest.add_preload("flows");
 
         if (options?.creation) {
             let c = JSON.parse(options.creation)
@@ -1436,18 +1230,7 @@ module.exports = function(RED) {
         let editor_transmission_on = { "noderedmcu": { "editor": true }};
         manifest.add(editor_transmission_on, "config");
 
-        // let test = {
-        //     "static": 65536,
-        //     "stack": 384,
-        //     "keys": {
-        //         "available": 64,
-        //         "name": 53,
-        //         "symbol": 3,
-        //     },
-        // }
-
         let m = manifest.get();
-        // console.log(m);
 
         // Write the (root) manifest.json
         fs.writeFileSync(path.join(dest, "manifest.json"), manifest.get(), (err) => {
@@ -1693,30 +1476,6 @@ module.exports = function(RED) {
 
         publish_stdout("> cd " + make_dir);
 
-        // const build_commands = {
-        //     "sim": [
-        //         cmd
-        //     ],
-        //     "esp": [
-        //         cmd
-        //     ],
-        //     "esp32": [
-        //         os.platform() === "win32"
-        //             ? '%comspec% /k ""%ProgramFiles%\\Microsoft Visual Studio\\2022\\Community\\VC\Auxiliary\\Build\\vcvars32.bat" && pushd %IDF_PATH% && "%IDF_TOOLS_PATH%\idf_cmd_init.bat" && popd"'
-        //             : "source $IDF_PATH/export.sh",
-        //         cmd
-        //     ],
-        //     "pico": [
-        //         cmd
-        //     ],
-        //     "gecko": [
-        //         cmd
-        //     ],
-        //     "qca4020": [
-        //         cmd
-        //     ]
-        // }
-
         let bcmds = [cmd];  // build_commands
 
         switch (pid) {
@@ -1805,8 +1564,6 @@ module.exports = function(RED) {
 
             case "darwin":
 
-                // runner_options["windowsHide"] = true;
-
                 publish_stdout("Creating build script file...")
                 fs.writeFileSync(path.join(make_dir, "build.sh"), bcmds.join("\n"))
                 bcmds = ["./build.sh"];
@@ -1821,7 +1578,6 @@ module.exports = function(RED) {
                                 resolve();
                                 return;
                             }
-                            // console.log(err);
                             reject(err);
                         }
                         resolve();
@@ -1887,184 +1643,11 @@ module.exports = function(RED) {
             .catch((err) => reject(err));
         });
 
-        // shell_options.shell = true;
-
-        // const shell = getPersistentShell(process.env.SHELL, shell_options);
-
-        // shell.process.stdout.on('data', function(data) {
-        //     publish_stdout(data); 
-        // });
-        // shell.process.stderr.on('data', function(data) {
-        //     publish_stderr(data); 
-        // });
-
-        // bcp = build_commands[pid];
-
-        // for (let i=0; i<bcp.length; i++) {
-        //     shell.execCmd(bcp[i]);
-        // }
-        // console.log("prebcmd")
-        // // shell.process.stdin.emit('end');
-        // shell.process.stdin.end();
-        // console.log("post")
-        // try {
-        //     // let result = await shell.finalResult;
-        //     let result = shell.finalResult;
-        //     result.then((data) => {
-        //         console.log("@then")
-        //         console.log(data)
-        //     })
-        //     .catch((err) => {
-        //         console.log("@catch")
-        //         console.log(err)
-        //     })
-        // }
-        // catch (err) {
-        //     console.log("@tryatch")
-        //     console.log(err);
-        // }
-
-        // console.log("end")
-
     } 
-
-
-    // function build_and_run(publish, options) {
-
-    //     options = options ?? {};
-    //     let cmd = "mcconfig"
-
-    //     if (options.debug === true) {
-    //         cmd += " -d";
-    //         cmd += " -x localhost:5004"
-    //     }
-
-    //     if (options.pixel) {
-    //         cmd += " -f " + options.pixel;
-    //     }
-
-    //     if (options.release === true) {
-    //         cmd += " -i"
-    //     }
-
-    //     if (options.make === true) {
-    //         cmd += " -m";
-    //     }
-
-    //     if (options.platform) {
-    //         cmd += " -p " + options.platform;
-    //     }
-
-    //     if (options.rotation) {
-    //         cmd += " -r " + options.rotation;
-    //     }
-
-    //     if (options.buildtarget) {
-    //         cmd += " -t " + options.buildtarget;
-    //     }
-
-    //     if (options.arguments) {
-
-    //         let args = JSON.parse(options.arguments)
-    //         for (key in args) {
-    //             cmd += " " + key + '="' + args[key] + '"'
-    //         }
-    //     }
-
-    //     return new Promise((resolve, reject) => {
-
-    //         let msg = {};
-    //         let error;
-    
-    //         try {
-    //             let make_dir = make_build_environment();
-    //             // console.log(make_dir);
-                
-    //             // RDW 20220805: obsolete now
-    //             // patch_xs_file("5002", "5004");
-                
-    //             publish("mcu/stdout/test",  "cd " + make_dir, false); 
-    //             publish("mcu/stdout/test",  cmd, false); 
-
-    //             let builder = exec(cmd, {
-    //                 cwd: make_dir,
-    //             }, (err, stdout, stderr) => {
-            
-    //                 if (err) {
-    //                     msg.error = {};
-    //                     for (e in err) {
-    //                         msg.error[e] = err[e];
-    //                     }
-    //                 }
-                    
-    //                 msg.exec = {};
-    //                 msg.exec.stdout = stdout;
-    //                 msg.exec.stderr = stderr;
-    
-    //                 // console.log(msg);
-
-    //                 // RDW 20220805: obsolete now
-    //                 /*
-    //                 try {
-    //                     patch_xs_file("5004", "5002");
-    //                 }
-    //                 catch (error) {
-    //                     if (!msg.error) {
-    //                         msg.error = {};
-    //                     }
-    //                     msg.error['patch_error'] = error; 
-    //                 }
-    //                 */
-
-    //                 if (msg.error) {
-    //                     reject(msg)
-    //                 }
-
-    //                 resolve(msg);
-    //             });
-
-    //             builder.stdout.on('data', function(data) {
-    //                 publish("mcu/stdout/test", data, false); 
-    //             });
-    //             builder.stderr.on('data', function(data) {
-    //                 publish("mcu/stdout/test", data, false); 
-    //             });
-
-    //         } catch (err) {
-    //             console.log("@catch (err)")
-    //             console.log(err);
-
-    //             msg.error = {};
-    //             for (e in err) {
-    //                 msg.error[e] = err[e];
-    //             }
-    
-    //             // RDW 20220805: obsolete now
-    //             /*
-    //             try {
-    //                 patch_xs_file("5004", "5002");
-    //             }
-    //             catch (error) {
-    //                 if (!msg.error) {
-    //                     msg.error = {};
-    //                 }
-    //                 msg.error['patch_error'] = error; 
-    //             }
-    //             */
-
-    //             console.log("Error:", msg);
-
-    //             console.log("@reject")
-    //             reject(msg);
-    
-    //         }
-    //     })
-    // }
     
 
     RED.plugins.registerPlugin("node-red-mcu", {
         onadd: () => {
-            // console.log("MCU added.")
 
             RED.httpAdmin.post(`${apiRoot}/flows2build`, routeAuthHandler, (req, res) => {
                 if (req.body && req.body.flows2build) {
@@ -2073,64 +1656,8 @@ module.exports = function(RED) {
                 res.status(200).send('OK');
             });
 
-            RED.events.on("runtime-event", function(data) {
-                return;
-                if (data && data.payload) {
-                    if (data.payload.state === "start" && data.payload.deploy === true) {
-                        // console.log(data);
-
-                        console.log("Building NOW the MCU App.")
-
-                        // create the proxy to the MCU / Simulator
-                        if (proxy) {
-                            proxy.disconnect();
-                            delete proxy;
-                        }
-                        // console.log(mcuProxy);
-
-                        proxy = new mcuProxy.proxy();
-
-                        proxy.on("status", (data, id) => {
-
-                            /* {
-                                text: 1658087621772,
-                                source: { id: '799b7e8fcf64e1fa', type: 'debug', name: 'debug 4' }
-                            } */
-                
-                            let status = {};
-                
-                            let fill = data.fill;
-                            let shape = data.shape;
-                            let text = data.text;
-                
-                            if (fill) { status["fill"] = fill;}
-                            if (shape) { status["shape"] = shape;}
-                            if (text) { status["text"] = text;}
-                
-                            id = id ?? data?.source?.id
-
-                            if (id) {
-                                console.log("Emitting to " + id);
-                                RED.events.emit("node-status",{
-                                    "id": id,
-                                    "status": status
-                                });
-                            }
-                
-                            console.log("Status:", status);
-                        })
-
-                        let msg = build_and_run();
-                        console.log(msg);
-
-                    }
-                }
-            });
-
             RED.httpAdmin.post(`${apiRoot}/build`, routeAuthHandler, (req, res) => {
                 
-                console.log("@manual_build")
-
                 let build_options = req.body.options
                 if (!build_options) {
                     res.status(400).end();
@@ -2151,7 +1678,7 @@ module.exports = function(RED) {
 
                 // abort the currently running runner
                 if (runner_promise && runner_abort) {
-                    console.log("Aborting...")
+                    // console.log("Aborting...")
                     runner_abort.abort();
                     delete runner_promise;
                     delete runner_abort;
@@ -2162,7 +1689,6 @@ module.exports = function(RED) {
                     proxy.disconnect();
                     delete proxy;
                 }
-                // console.log(mcuProxy);
 
                 proxy = new mcuProxy.proxy();
 
@@ -2173,8 +1699,6 @@ module.exports = function(RED) {
                         source: { id: '799b7e8fcf64e1fa', type: 'debug', name: 'debug 4' }
                     } */
         
-                    console.log(data);
-
                     let status = {};
         
                     let fill = data.fill;
@@ -2186,14 +1710,12 @@ module.exports = function(RED) {
                     if (text) { status["text"] = text;}
         
                     if (id) {
-                        console.log("Emitting to " + id);
                         RED.events.emit("node-status",{
                             "id": id,
                             "status": status
                         });    
                     }
         
-                    // console.log("Status:", status);
                 })
 
                 proxy.on("input", (id, data) => {
@@ -2280,43 +1802,6 @@ module.exports = function(RED) {
 
                 })
 
-                // proxy.on("login", () => {
-                //     // RED.notify("MCU initializing...", { type: "warning", timeout: 3000 });
-
-                //     RED.comms.publish("mcu/notify",  {
-                //         "message": "MCU initializing...", 
-                //         "options": { type: "warning", timeout: 5000 }
-                //     });
-                // })
-
-                // proxy.on("ready", () => {
-                //     // RED.notify("MCU initializing...", { type: "warning", timeout: 3000 });
-                    
-                //     RED.comms.publish("mcu/notify",  {
-                //         "message": "MCU ready.", 
-                //         "options": { timeout: 5000 }
-                //     });
-                // })
-                
-
-                // build_and_run()
-                // .then(msg => { console.log(msg) })
-                // .catch(msg => {console.log("error @ build_and_run", msg)});
-
-                // return build_and_run(RED.comms.publish, build_options)
-                // .then((msg) => {
-                //     // console.log("after build", msg)
-                //     if (msg.error) {
-                //         res.status(500).end();
-                //     } else {
-                //         res.status(200).end();
-                //     }
-                // })
-                // .catch((err) => {
-                //     // RED.comms.publish("mcu/stdout/test", "__flash_console", true)
-                //     res.status(400).end();
-                // })
-
                 try {
                     runner_promise = build_flows(build_options, RED.comms.publish)
                     .then( () => {
@@ -2332,87 +1817,37 @@ module.exports = function(RED) {
                     res.status(400).end();
                 }
 
-
-
-
-                /*
-                    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), app_name));
-  
-                    exec("mcconfig -d -m -p mac", {
-                        cwd: tmpDir
-                    }, (error, stdout, stderr) => {
-                        if (error) {
-                            res.status(500).send(error.message);
-                        } else {
-                            res.status(200).send('OK');
-                        }
-                        // console.log(stdout);
-                        // console.error(stderr);
-                      });
-                }
-                finally {
-                    try {
-                        if (tmpDir) {
-                          fs.rmSync(tmpDir, { recursive: true });
-                        }
-                      }
-                    catch (e) {}
-                }
-*/
-                // console.log("MCU -> build");
-                //res.sendStatus(200);
             });
 
 
             RED.httpAdmin.get(`${apiRoot}/config`, routeAuthHandler, (req, res) => {
-                // console.log("cache_data", mcu_plugin_config.cache_data)
                 let c = {
                     "config": mcu_plugin_config.cache_data
                 }
-                // refresh_serial_ports();
                 res.status(200).end(JSON.stringify(c), "utf8")
             })
 
             RED.httpAdmin.get(`${apiRoot}/config/plugin`, routeAuthHandler, (req, res) => {
                 let c = {
-                    // "simulators": mcu_plugin_config.simulators,
                     "platforms": mcu_plugin_config.platforms,
                     "ports": mcu_plugin_config.ports
                 }
                 res.status(200).end(JSON.stringify(c), "utf8")
             })
 
-            /*
-            RED.httpAdmin.get(`${apiRoot}/config/ports`, routeAuthHandler, (req, res) => {
-                let c = {
-                    "ports": mcu_plugin_config.ports,
-                }
-                // refresh_serial_ports();
-                res.status(200).end(JSON.stringify(c), "utf8")
-            })
-            */
-
             RED.httpAdmin.post(`${apiRoot}/config`, routeAuthHandler, (req, res) => {
-                // console.log(req.body);
                 let config;
                 if (req.body && req.body.config) {
                     config = req.body.config;
                 } else {
-                    RED.log.error("node-red-mcu-plugin: Failed to parse incoming config data.");
+                    RED.log.error(`${app_name}: Failed to parse incoming config data.`);
                     res.status(400).end();
                     return;
                 }
                 persist_cache(config);
                 res.status(200).end();    
             })
-            
-
-/*
-            RED.httpAdmin.get(`${apiRoot}/test`, routeAuthHandler, (req, res) => {
-                // res.json(flowDebugger.getBreakpoints());
-                console.log("test.")
-            })
-*/            
+                      
         }
     });
     
