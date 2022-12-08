@@ -873,6 +873,16 @@ module.exports = function(RED) {
         manifest.add_build("MCUROOT", rmp);
         manifest.include_manifest("$(MCUROOT)/manifest_runtime.json")
 
+        // Add platform specific manifest - if there is one!
+        let platform = options.platform.split("/");
+        if (platform && platform[0].length > 0) {
+            const platform_manifest_path = "./platforms";
+            const pmp = path.resolve(__dirname, platform_manifest_path, platform[0], "manifest.json");
+            if (fs.existsSync(pmp)) {
+                manifest.include_manifest(pmp);
+            }
+        }
+
         // manifest.add_module("$(MCUROOT)/main")
 
         // manifest.include_manifest("./manifest_flows.json");
