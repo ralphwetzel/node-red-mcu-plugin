@@ -1777,7 +1777,7 @@ module.exports = function(RED) {
 
                 run_cmd = filename => new Promise((resolve, reject) => {
 
-                    publish_stdout(`> ${cmd}`);
+                    publish_stdout(`> cmd.exe ${filename}`);
 
                     let builder = execFile(filename, undefined, runner_options, (err, stdout, stderr) => {
                         if (err) {
