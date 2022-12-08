@@ -921,9 +921,57 @@
                 "height": "100%",
                 "min-height": "89px"
             })
-            .appendTo(console_container);
+            .appendTo(console_container)
+            .hover(
+                function() {
+                    if (ccbt) {
+                        clearTimeout(ccbt);
+                    }
+                    ccbt = setTimeout(function () {
+                        let v = console_view.val();
+                        if (v && typeof (v) == "string" && v.length > 0) {
+                            if (console_copy_button) {
+                                console_copy_button.show(200);
+                            }
+                        }
+                    }, 200);
+                },
+                function (evt) {
+                    if (ccbt) {
+                        clearTimeout(ccbt);
+                    }
 
-        $("<div class='mcu-build-progress-bar'>").appendTo(console_container);
+                    ccbt = setTimeout(function () {
+                        let rect = evt.target.getBoundingClientRect();
+                        let in_x = (evt.clientX > rect.left) && (evt.clientX < rect.right);
+                        let in_y = (evt.clientY > rect.top) && (evt.clientY < rect.bottom);
+
+                        if (in_x && in_y) {
+                            return;
+                        }
+                        console_copy_button.hide(100);
+
+                    }, 300);
+                    // console.log(evt);
+                }
+            );
+
+     $("<div class='mcu-build-progress-bar'>").appendTo(console_container);
+        let console_copy_button = $('<button class="red-ui-button" title="Test"><i class="fa fa-clipboard"></i></button>').appendTo(console_container);
+        let ccbt;   // console_copy_button_timer
+        console_copy_button.css({
+            position: "absolute",
+            top: "calc(100% - 85px)",
+            left: "calc(100% - 46px)"
+        }).on("click", function(evt) {
+
+            if (!console_view) return;
+
+            let cp = console_view.val();
+            navigator.clipboard.writeText(cp);
+            RED.notify("Console data copied to Clipboard.", { type: "success", timeout: 2500 });
+        }).hide();
+        RED.popover.tooltip(console_copy_button,"Copy to Clipboard");
 
         config_container = $('<div>')
             .css({
