@@ -535,6 +535,7 @@ module.exports = function(RED) {
             'esp32/nodemcu',
             'esp32/oddwires',
             'esp32/qtpys3',
+            'esp32/s3_tft_feather',
             'esp32/saola_wroom',
             'esp32/saola_wrover',
             'esp32/wemos_oled_lolin32',
