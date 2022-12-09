@@ -1007,6 +1007,77 @@ module.exports = function(RED) {
 
         let ui_support_demand_confirmed = false;
 
+        // *****
+        // Map Node-RED node definitions to node-red-mcu core manifest.json files
+
+        // Check directories in node-red-mcu/nodes
+        // Latest check: 20220912/RDW
+
+        // core: Node of node-red; type -> nr_type_map
+        // mcu: Contrib node; module id -> mcu_module_map
+        // package: Has dedicated package.json; no action
+
+        // audioout => package
+        // batch => core
+        // csv => core
+        // delay => core
+        // file => core (file, file in)
+        // httprequest => core (http request)
+        // httpserver => core (hhtp in, http response)
+        // join => core
+        // lower-case => package
+        // openweathermap => mcu
+        // random => core
+        // rpi-ds18b20 => mcu
+        // rpi-gpio => mcu
+        // rpi-neopixels => mcu
+        // sensor => package
+        // sort => core
+        // template => core
+        // trigger => core
+        // udp => core (udp in, udp out)
+        // ui => DEDICATED HANDLING
+        // websocketnodes => core (websocket-client, websocket-listener, websocket in, websocket out)
+
+        function mcu_manifest(name) {
+            return `$(MCUROOT)/nodes/${name}/manifest.json`
+        }
+
+        // need to map here every type covered
+        const nr_type_map = {
+            "batch": "batch",
+            "csv": "csv",
+            "delay": "delay",
+            "file": "file",
+            "file in": "file",
+            "http request": "httprequest",
+            "http in": "httpserver",
+            "http response": "httpserver",
+            "join": "join",
+            "random": "random",
+            "sort": "sort",
+            "template": "template",
+            "trigger": "trigger",
+            "udp in": "udp",
+            "udp out": "udp",
+            "websocket-client": "websocketnodes",
+            "websocket-listener": "websocketnodes",
+            "websocket in": "websocketnodes",
+            "websocket out": "websocketnodes",
+        }
+
+        // always map the (full) module
+        const mcu_module_map = {
+
+            "node-red-node-openweathermap": mcu_manifest("openweathermap"),
+
+            // https://github.com/bpmurray/node-red-contrib-ds18b20-sensor
+            "node-red-contrib-ds18b20-sensor": mcu_manifest("rpi-ds18b20"),
+            
+            "node-red-node-pi-gpio": mcu_manifest("rpi-gpio"),
+            "node-red-node-pi-neopixel": mcu_manifest("rpi-neopixels"),    // Att: this is pixel vs. pixel"s"
+        }
+
         nodes.forEach(function(n) {
 
             // clean the config from the _mcu flag
@@ -1022,19 +1093,17 @@ module.exports = function(RED) {
             if (!module) return;
             
             if (module === "node-red") {
-                switch(n.type) {
-                    case "trigger":
-                        manifest.include_manifest("$(MCUROOT)/nodes/trigger/manifest.json");
-                        break;
-
-                    default:
-                        // Not adding any additional manifest for Node-RED core nodes.
-                        break;
+                if (n.type in nr_type_map) {
+                    manifest.include_manifest(mcu_manifest(nr_type_map[n.type]));
+                }
+                else {
+                    // Not adding any additional manifest for Node-RED core nodes.
                 }
                 return;
 
-            } else if (module === "node-red-node-pi-gpio") {
-                // Not adding any manifest for node-red-mcu core nodes.
+            } else if (module in mcu_module_map) {
+                // mcu_module_map already defines path to manifest.json
+                manifest.include_manifest(mcu_module_map[module]);
                 return;
 
             } else if (module === "node-red-dashboard") {
