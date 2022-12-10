@@ -501,7 +501,7 @@
 
         // Flag set when '......' printing happens;
         // this ensures that a line feed is inserted afterwards - if necessary!
-        let waiting_dot = false;
+        let waiting_dot = 0;
 
         RED.comms.subscribe("mcu/stdout/#", function (topic, msg) {
 
@@ -517,11 +517,11 @@
                 } else {
                     let text = mcuc.val()
                     
-                    if (waiting_dot === true && msg[0] !== "." && msg.charCodeAt(0) !== 10){
+                    if (waiting_dot > 1 && msg[0] !== "." && msg.charCodeAt(0) !== 10){
                         text += '\n';
-                        waiting_dot = false;
+                        waiting_dot = 0;
                     } else if (msg.length == 1 && msg[0] == ".") {
-                        waiting_dot = true;
+                        waiting_dot += 1;
                     }
 
                     text += msg;
