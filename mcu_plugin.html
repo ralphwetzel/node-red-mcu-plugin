@@ -502,6 +502,10 @@
 
         const progress_re = /^(?:Writing at 0x)(?:[0123456789abcdef]+\.{3} \()(\d{1,3})(?: %\))/;
 
+        // Flag set when '......' printing happens;
+        // this ensures that a line feed is inserted afterwards - if necessary!
+        let waiting_dot = false;
+
         RED.comms.subscribe("mcu/stdout/#", function (topic, msg) {
 
             let mcuc = $("#mcu_console");
@@ -509,24 +513,20 @@
             // If the textarea is initially scrolled to its bottom position...
             var at_the_bottom = (mcuc[0].scrollHeight - mcuc.scrollTop() - mcuc[0].clientHeight < 8);
 
-            try {
-                msg = msg.trim();
-            } catch (err) {
-                return;
-            }
-
-            // var msgs = d[key];
             if (msg.length > 0) {
 
                 if (msg == "__flash_console") {
                     flashTab("__console__")
                 } else {
                     let text = mcuc.val()
-                    if (msg !== "." && text.length > 0) {
-                        text += '\r\n';
+                    
+                    if (waiting_dot === true && msg[0] !== "." && msg.charCodeAt(0) !== 10){
+                        text += '\n';
+                        waiting_dot = false;
+                    } else if (msg.length == 1 && msg[0] == ".") {
+                        waiting_dot = true;
                     }
-                    // console.log(msg, msg.charCodeAt(msg.length-1));
-                    // text += msg.join('\r\n');
+
                     text += msg;
                     mcuc.val(text);
                     if (at_the_bottom) {

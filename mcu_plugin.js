@@ -1328,11 +1328,11 @@ module.exports = function(RED) {
             publish("mcu/stdout/test", msg, false); 
         }
 
-        publish_stdout("Starting build process...")
+        publish_stdout("Starting build process...\n")
 
-        publish_stdout(`Host system check: ${os.version()}`);
-        publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable}` );
-        publish_stdout(`HOME directory check: ${os.homedir()}`);
+        publish_stdout(`Host system check: ${os.version()}\n`);
+        publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable}\n` );
+        publish_stdout(`HOME directory check: ${os.homedir()}\n`);
 
         // create flows.json
         // create manifest.json for nodes in flows.json
@@ -1359,7 +1359,7 @@ module.exports = function(RED) {
 
             let n = process.env[name];
             if (n) {
-                publish_stdout(`$${name} is defined: ${n}`)
+                publish_stdout(`$${name} is defined: ${n}\n`)
 
                 // verify that $name declares a valid path.
                 if (!fs.existsSync(n)) {
@@ -1401,11 +1401,11 @@ module.exports = function(RED) {
                 n = path.dirname(n);
             }
 
-            publish_stdout(`$${name} identified: ${n}`);
+            publish_stdout(`$${name} identified: ${n}\n`);
             return n;
         }
 
-        publish_stdout(`Creating build environment for platform ${options.platform}.`)
+        publish_stdout(`Creating build environment for platform ${options.platform}.\n`)
 
         // Define local dir as working_directory based on options.id
         const make_dir = path.join(RED.settings.userDir, "mcu-plugin-cache", `${options.id}`);
@@ -1416,11 +1416,11 @@ module.exports = function(RED) {
         try {
             make_build_environment(make_dir, options);
         } catch (err) {
-            publish_stderr(err.toString());
+            publish_stderr(err.toString() + "\n");
             return Promise.reject(err);
         }
 
-        publish_stdout(`Working directory: ${make_dir}`);
+        publish_stdout(`Working directory: ${make_dir}\n`);
 
         let env = {
             "HOME": os.homedir(),
@@ -1544,7 +1544,7 @@ module.exports = function(RED) {
             "env": env
         };
 
-        publish_stdout("> cd " + make_dir);
+        publish_stdout(`> cd ${make_dir}\n`);
 
         let bcmds = [cmd];  // build_commands
 
@@ -1600,13 +1600,13 @@ module.exports = function(RED) {
 
                 runner_options["windowsHide"] = true;
 
-                publish_stdout("Creating build batch file...")
+                publish_stdout("Creating build batch file...\n")
                 fs.writeFileSync(path.join(make_dir, "build.bat"), bcmds.join("\r\n"))
                 bcmds = ["build.bat"];
 
                 run_cmd = filename => new Promise((resolve, reject) => {
 
-                    publish_stdout(`> cmd.exe ${filename}`);
+                    publish_stdout(`> cmd.exe ${filename}\n`);
 
                     let builder = execFile(filename, undefined, runner_options, (err, stdout, stderr) => {
                         if (err) {
@@ -1634,13 +1634,13 @@ module.exports = function(RED) {
 
             case "darwin":
 
-                publish_stdout("Creating build script file...")
+                publish_stdout("Creating build script file...\n")
                 fs.writeFileSync(path.join(make_dir, "build.sh"), bcmds.join("\n"))
                 bcmds = ["./build.sh"];
 
                 run_cmd = filename => new Promise((resolve, reject) => {
 
-                    publish_stdout(`> /bin/bash ${filename}`);
+                    publish_stdout(`> /bin/bash ${filename}\n`);
 
                     let builder = execFile("/bin/bash", [filename], runner_options, (err, stdout, stderr) => {
                         if (err) {
@@ -1670,7 +1670,7 @@ module.exports = function(RED) {
 
                 run_cmd = cmd => new Promise((resolve, reject) => {
 
-                    publish_stdout(`> ${cmd}`);
+                    publish_stdout(`> ${cmd}\n`);
         
                     let builder = exec(cmd, runner_options, (err, stdout, stderr) => {
                         if (err) {
