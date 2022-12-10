@@ -1,3 +1,9 @@
+/*
+    node-red-mcu-plugin by @ralphwetzel
+    https://github.com/ralphwetzel/node-red-mcu-plugin
+    License: MIT
+*/
+
 const clone = require("clone");
 // const { exec } = require('node:child_process'); // <== Node16 
 const { exec, execFile, execSync } = require('child_process');  // Node14
