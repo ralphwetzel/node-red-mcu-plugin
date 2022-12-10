@@ -1,3 +1,12 @@
+<!--
+
+/*
+    node-red-mcu-plugin by @ralphwetzel
+    https://github.com/ralphwetzel/node-red-mcu-plugin
+    License: MIT
+*/
+
+-->
 
 <!-- Additional styles for red-ui-tabs-bottom -->
 
@@ -119,7 +128,6 @@
 
     function show() {
         RED.sidebar.show("node-red-mcu");
-        console.log("now showing...")
     }
 
     function onFlowAdd(ws) {
@@ -183,14 +191,6 @@
 
     function getGutter(n) {
         var span = $("<span>",{class:"red-ui-info-outline-gutter red-ui-treeList-gutter-float"});
-            /*
-        var revealButton = $('<button type="button" class="red-ui-info-outline-item-control-reveal red-ui-button red-ui-button-small"><i class="fa fa-search"></i></button>').appendTo(span).on("click",function(evt) {
-            evt.preventDefault();
-            evt.stopPropagation();
-            RED.view.reveal(n.id);
-        })
-        */
-        // RED.popover.tooltip(revealButton,RED._("sidebar.info.find"));
         return span;
     }
 
@@ -218,7 +218,6 @@
         delete objects[n.id]
     }
     
-
     function resize_sidebar(top, bottom) {
 
         let header_height = buildPanelHeader.outerHeight();
@@ -228,7 +227,6 @@
         }
         if (buildPanel) {
             bottom = bottom || $(buildPanel).outerHeight();
-            console.log(bottom)
         }
 
         if (tabs) {
@@ -239,7 +237,6 @@
             let tabs_height = tabs ? $(tabs).height : 0;
 
             config_view.editableList("width", $(config_view).width());
-            // config_view.css({"top": "0 px"});
 
             let cvh = bottom - 88;
             config_view.editableList("height", cvh < 100 ? 100 : cvh);
@@ -542,7 +539,6 @@
                     }
                 }
             }
-            // console.log(topic, msg);
         });
 
 
@@ -641,8 +637,6 @@
             "overflow": "hidden",
             "height": "100%",
             "min-height": "50px"
-            //"display": "flex",
-            //"flex-direction": "column"
         }).appendTo(stackContainer);
         buildPanelHeader = $("<div>", { class: "red-ui-sidebar-header" }).css({ "text-align": "left" }).appendTo(buildPanel);
 
@@ -650,27 +644,17 @@
         let buildPanelHeaderLeft = $('<span>').css({ "flex-grow": "1", "text-align": "left" }).appendTo(buildPanelHeader);
         let buildPanelHeaderRight = $('<span>').css({ "display": "unset" }).appendTo(buildPanelHeader);
 
-        // $("<span>").css({height: "100%", "vertical-align": "middle", display: "inline-block"}).appendTo(buildPanelHeaderLeft); 
         $("<span>").text("MCU Build Configurations").css({ "text-align": "left", "font-weight": "bold", "vertical-align": "middle", display: "inline-block" }).appendTo(buildPanelHeaderLeft);
-        // $("<span>").text("MCU Build Setup").appendTo(buildPanelHeaderLeft);
 
         tabsContainer = $('<div>', { class: "tabs-container" }).css({ "position": "absolute", "top": "calc(100% - 35px)", "width": "100%" }).appendTo(buildPanel);
         let buildTabs = $('<ul>', { id: "tabs-tabs" }).appendTo(tabsContainer);
 
         panels = RED.panels.create({
             container: stackContainer,
-            /*
-            resize: function(size_top, size_bottom) {
-                if (size_bottom < 100) {
-                    panels.resize(size_top + size_bottom - 100, 100);
-                }
-            }
-            */
             resize: function (top, bottom) {
                 resize_sidebar(top, bottom);
             }
         })
-        // RED.sidebar.info.outliner.build().appendTo(outlinerPanel);
 
         function resize_panels() {
             if (panels) {
@@ -686,7 +670,6 @@
         // the flows treeList
         flowSelector = $("<div>").css({ width: "100%", height: "calc(100% - 37px" }).appendTo(selectorPanel);
         flowSelector.treeList({
-            // data:getFlowData(),
             data: flowData,
             multi: true,
         }).on('treelistselect', function (event, item) {
@@ -819,14 +802,7 @@
             id: "tabs-tabs",
             vertical: false,
             scrollable: true,
-            /*
-            addButton: function () {
-                let tpl = addTemplate();
-                let tab_id = addTemplateTab(tpl);
-                tabs.activateTab(tab_id);
-                self.changed = true;
-            }, 
-            addButtonCaption: "Add new template", */
+
             onchange: function (tab) {
 
                 if (console_container) {
@@ -875,36 +851,12 @@
         tabs.addTab(tab2);
         tabs.resize();
 
-        // tabsTop.addTab(tab);
-        // tabsTop.addTab(tab2);
-        // tabsTop.resize();
-
         bPHh = buildPanelHeader.height();
 
         console_container = $('<div>').css({ "height": "calc(100% - 42px - 40px - 4px)", "display": "none" }).appendTo(buildPanel);
         console_view = $('<textarea id="mcu_console" wrap="hard" readonly>')
-            // .css({
-            //     "position": "absolute",
-            //     "top": "51px",
-            //     "box-sizing": "border-box",
-            //     "margin": "4px",
-            //     "font-family": "monospace",
-            //     "font-size": "9pt",
-            //     "color": "white",
-            //     "background-color": "black",
-            //     "white-space": "pre",
-            //     "overflow": "scroll",
-            //     "width": "calc(100% - 8px)",
-            //     "resize": "none",
-            //     "line-height": "normal",
-            //     "cursor": "default",
-            //     // "height": "calc(100% - 42px - 52px - 4px)",
-            //     "height": "100%",
-            //     "min-height": "89px"
-            // })
             .css({
                 "position": "relative",
-                // "top": "51px",
                 "box-sizing": "border-box",
                 "margin-top": "4px",
                 "margin-left": "4px",
@@ -920,7 +872,6 @@
                 "resize": "none",
                 "line-height": "normal",
                 "cursor": "default",
-                // "height": "calc(100% - 42px - 52px - 4px)",
                 "height": "100%",
                 "min-height": "89px",
                 "scrollbar-width": "none"
@@ -956,7 +907,6 @@
                         console_copy_button.hide(100);
 
                     }, 300);
-                    // console.log(evt);
                 }
             );
 
@@ -1018,7 +968,6 @@
                 // Patch onclick of the item-remove-button
                 // original @ editableList.js / 307
                 container.parent().find("a.red-ui-editableList-item-remove").unbind("click").on("click", function (evt) {
-                    console.log("clickhandler");
                     evt.preventDefault();
 
                     let that = self;
@@ -1073,7 +1022,6 @@
                 let inputRows = $('<div></div>').appendTo(container);
 
                 let row1 = $('<div></div>').appendTo(inputRows);
-                // $('<div>', {style:"display: inline-block; padding: 0px 6px; width: 70px;"}).text("Platform:").appendTo(row1);
 
                 // for later...
                 let platform;
@@ -1148,10 +1096,6 @@
                     })
 
                 platform.next().css({ "min-width": "214px", "width": "auto" });
-
-
-                // platform.typedInput("width", "350 px");
-                // platform.next().css({"min-width": "214px", "width": "auto", "display": "flex", "margin-top": "4px"});
 
                 let row2 = $('<div>').css({ "margin-top": "4px" }).appendTo(inputRows).hide();
 
@@ -1337,9 +1281,6 @@
                                 "options": options
                             }),
                             success: function (resp) {
-                                // buildButton.toggleClass("disabled",!debuggerEnabled);
-                                // console.log("success");
-                                // bbb.find("i").removeClass("fa-spin");
                                 if (spin_timer) {
                                     clearTimeout(spin_timer);
                                     spin_timer = undefined;
@@ -1347,7 +1288,6 @@
                                 }
                             },
                             error: function (jqXHR, textStatus, errorThrown) {
-                                // console.log(jqXHR,textStatus,errorThrown);
                                 flashTab("__console__");
                                 if (spin_timer) {
                                     clearTimeout(spin_timer);
@@ -1413,111 +1353,6 @@
                     bbd?.button( "option", "disabled", msg.state === "stop" );
                 });
 
-                // let b = $('<input type="checkbox"/>').css({ "margin-left": "20px" }).appendTo(row3)
-                // b.toggleButton({
-                //     enabledIcon: "fa-gear fa-spin fa-fw",
-                //     disabledIcon: "fa-cog",
-                //     // baseClass: "red-ui-sidebar-header-button"
-                //     enabledLabel: "Build",
-                //     disabledLabel: "Build"
-                // }).on("change", function () {
-
-                //     self = this;
-
-                //     function build(data) {
-
-                //         if (console_view) {
-                //             console_view.val("");
-                //         }
-
-                //         // compile the build parameters
-                //         let options = {};
-
-                //         for (key in data) {
-                //             if (key === "more") continue
-                //             else if (key === "debug" || key === "release" || key === "platform") {
-                //                 options[key] = data[key];
-                //             }
-                //             else if (key in build_config_default) {
-                //                 // only forward non-default values
-                //                 if (data[key] !== build_config_default[key]) {
-                //                     options[key] = data[key];
-                //                 }
-                //             } else {
-                //                 options[key] = data[key]
-                //             }
-                //         }
-
-                //         $.ajax({
-                //             url: "mcu/build",
-                //             contentType: "application/json",
-                //             type: "POST",
-                //             data: JSON.stringify({
-                //                 "options": options
-                //             }),
-                //             success: function (resp) {
-                //                 // buildButton.toggleClass("disabled",!debuggerEnabled);
-                //                 // console.log("success");
-                //                 $(self).trigger("change");
-                //             },
-                //             error: function (jqXHR, textStatus, errorThrown) {
-                //                 // console.log(jqXHR,textStatus,errorThrown);
-                //                 $(self).trigger("change");
-                //                 flashTab("__console__");
-                //             }
-                //         });
-
-                //     }
-
-                //     if ($(b).prop("checked") === true) {
-                //         $(b).prop("checked", false);
-
-                //         if (RED.nodes.dirty() === true) {
-                //             let notify_deploy = RED.notify("Deploy changes prior building for MCU?", {
-                //                 type: "info",
-                //                 modal: true,
-                //                 fixed: true,
-                //                 buttons: [
-                //                     {
-                //                         text: "No",
-                //                         click: function (e) {
-                //                             notify_deploy.close();
-                //                             build(data);
-                //                             return;
-                //                         }
-                //                     },
-                //                     {
-                //                         text: "Yes",
-                //                         class: "primary",
-                //                         click: function (e) {
-                //                             notify_deploy.close();
-                //                             $('#red-ui-header-button-deploy').trigger("click");
-                //                             let builder = function() {
-                //                                 RED.events.off("deploy", builder);
-                //                                 build(data);
-                //                             }
-                //                             RED.events.on("deploy", builder);
-                //                             setTimeout(function() {
-                //                                 RED.events.off("deploy", builder);
-                //                             }, 1000);
-                //                         }
-                //                     },
-                //                     {
-                //                         text: "Cancel",
-                //                         click: function (e) {
-                //                             $(b).prop("checked", false);
-                //                             notify_deploy.close();
-                //                             return;
-                //                         }
-                //                     }
-                //                 ]
-                //             });
-                //         } else {
-                //             build(data);
-                //         }
-                //     }
-                // });
-
                 let more = $('<a href="#">')
                     .text("Show more options...")
                     .css({ "margin-left": "20px", "font-size": "small", "text-decoration": "underline" })
@@ -1572,8 +1407,6 @@
                         options: [
                             { value: "d", label: "Debug" },
                             { value: "i", label: "Release" },
-                            // { value: "rgb565le"},
-                            // { value: "qca4020", label: "QCA4020 | Qualcomm"},
                         ],
                     }],
                 }).on('change', function (event, type, value) {
@@ -1632,7 +1465,6 @@
 
                 $('<div class="mcu-build-option-label">').text("WiFi | SSID:").appendTo(row4);
                 let ssid = $('<input>').appendTo(row4)
-                // str: {value:"str",label:"string",icon:"red/images/typedInput/az.svg"},
                 ssid.typedInput({
                     type: "ssid",
                     types: [{
@@ -1702,11 +1534,6 @@
                 })
                 ui_support.next().css({ "width": "auto" });
 
-                // For today: Disable this!
-                // ui_support.typedInput('disable');
-                // ui_support.next().find(".red-ui-typedInput-option-label").css({"color": "grey"});
-
-                // $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
                 rowUI = $('<div>').css({ "margin-top": "8px" }).appendTo(row4).hide();
                 
                 $('<div class="mcu-build-option-label">').text("Screen Pixel Format:").appendTo(rowUI);
@@ -1721,7 +1548,6 @@
                             { value: "rgb332" },
                             { value: "rgb565be" },
                             { value: "rgb565le" },
-                            // { value: "qca4020", label: "QCA4020 | Qualcomm"},
                         ],
                     }],
                 }).on('change', function (event, type, value) {
@@ -1734,8 +1560,6 @@
 
                 $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(rowUI);
 
-                // $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
-
                 $('<div class="mcu-build-option-label">').text("Screen Rotation:").appendTo(rowUI);
                 let rotation = $('<input>').appendTo(rowUI)
                 rotation.typedInput({
@@ -1747,8 +1571,6 @@
                             { value: "90", label: "90°" },
                             { value: "180", label: "180°" },
                             { value: "270", label: "270°" },
-                            // { value: "rgb565le"},
-                            // { value: "qca4020", label: "QCA4020 | Qualcomm"},
                         ],
                     }],
                 }).on('change', function (event, type, value) {
@@ -1883,11 +1705,8 @@
                 persist_config();
             },
             resizeItem(row, item) {
-                // debugger;
-                // $(row).find(".platform").typedInput("width", 400);
             },
             resize() {
-                // debugger;
             }
         })
 
@@ -1915,8 +1734,6 @@
             url: "mcu/config",
             contentType: "application/json",
             success: function (resp) {
-                // buildButton.toggleClass("disabled",!debuggerEnabled);
-                // console.log("success");
 
                 let response;   // {config: [{...}]}
                 try {
@@ -1949,8 +1766,6 @@
                 }
             },
             error: function (jqXHR, textStatus, errorThrown) {
-                // console.log(jqXHR,textStatus,errorThrown);
-                // $(b).trigger("change");
                 flashTab("__console__");
             }
         });
@@ -1986,12 +1801,8 @@
                     contentType: "application/json",
                     data: data,
                     success: function (resp) {
-                        // buildButton.toggleClass("disabled",!debuggerEnabled);
-                        // $(b).trigger("change");
                     },
                     error: function (jqXHR, textStatus, errorThrown) {
-                        // $(b).trigger("change");
-                        // flashTab("__console__");
                     }
                 });
             }
