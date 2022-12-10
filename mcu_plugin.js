@@ -1456,6 +1456,12 @@ module.exports = function(RED) {
                     `${HOME}/esp32/esp-idf`,
                     `${HOME}/.local/share/esp32/esp-idf`
                 ]);
+
+                if (os.platform() == "win32") {
+                    env.IDF_TOOLS_PATH = ensure_env_path("IDF_TOOLS_PATH", [
+                        `C:\\Espressif`
+                    ]);
+                }
                 break;
 
             case "pico":
