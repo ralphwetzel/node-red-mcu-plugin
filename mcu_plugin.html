@@ -517,11 +517,13 @@
                 } else {
                     let text = mcuc.val()
                     
-                    if (waiting_dot > 1 && msg[0] !== "." && msg.charCodeAt(0) !== 10){
+                    if ("." === msg) {
+                        waiting_dot += 1;
+                    } else if (waiting_dot > 1 && msg[0] !== "." && msg.charCodeAt(0) !== 10){
                         text += '\n';
                         waiting_dot = 0;
-                    } else if (msg.length == 1 && msg[0] == ".") {
-                        waiting_dot += 1;
+                    } else {
+                        waiting_dot = 0;
                     }
 
                     text += msg;
