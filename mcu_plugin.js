@@ -31,6 +31,8 @@ const resolve_package_path = require('resolve-package-path')
 
 let flows2build = [];
 let proxy;
+let proxy_port_mcu = 5004;
+let proxy_port_xsbug = 5002;
 
 let error_header = "*** Error while loading node-red-mcu-plugin:"
 
@@ -1507,7 +1509,7 @@ module.exports = function(RED) {
 
         if (options.debug === true) {
             cmd += " -d";
-            cmd += " -x localhost:5004"
+            cmd += ` -x localhost:${proxy_port_mcu}`
         }
 
         if (options.pixel) {
@@ -1772,7 +1774,7 @@ module.exports = function(RED) {
                     delete proxy;
                 }
 
-                proxy = new mcuProxy.proxy();
+                proxy = new mcuProxy.proxy(proxy_port_mcu, proxy_port_xsbug);
 
                 proxy.on("status", (id, data) => {
 
