@@ -126,6 +126,7 @@ function get_require_path(req_path) {
 // Make available the Node-RED typeRegistry 
 
 const typeRegistryPath = get_require_path("node_modules/@node-red/registry");
+if (!typeRegistryPath) return;
 const typeRegistry = require(typeRegistryPath);
 
 // *****
