@@ -122,6 +122,8 @@
     let tabsContainer;
     
     let selectorPanel;
+    let selectorPanelTipStamp = 0;
+
     let buildPanel;
 
     let progress_bar;
@@ -632,8 +634,15 @@
             "overflow": "hidden",
             "height": "calc(70%)"
         }).appendTo(stackContainer);
-        let selectorPanelHeader = $("<div>", { class: "red-ui-sidebar-header" }).css({ "text-align": "left" }).appendTo(selectorPanel);
-        $("<span>").text("Flows to build for MCU").css({ width: "100%", "text-align": "left", "font-weight": "bold" }).appendTo(selectorPanelHeader);
+        let selectorPanelHeader = $("<div>", { class: "red-ui-sidebar-header" }).css({ "text-align": "left", display: "flex" }).appendTo(selectorPanel);
+        let selectorPanelHeaderLeft = $('<span>').css({ "flex-grow": "1", "text-align": "left" }).appendTo(selectorPanelHeader);
+        let selectorPanelHeaderRight = $('<span>').css({ "display": "unset" }).appendTo(selectorPanelHeader);
+        $("<span>").text("Flows to build for MCU").css({ width: "100%", "text-align": "left", "font-weight": "bold" }).appendTo(selectorPanelHeaderLeft);
+        let selectorPanelInfo = $('<span>').appendTo(selectorPanelHeaderRight);
+        $('<i class="fa fa-info-circle fa-lg" aria-hidden="true"></i>').css({'color': 'rgb(7, 48, 112)'}).appendTo(selectorPanelInfo);
+
+        let selectorPanelInfoTip = $('<span><span>When deployed, flows selected here are in<br><b>stand-by mode</b>, awaiting an incoming <br>MCU connection.<br>De-select them & deploy again to enable<br>standard Node-RED functionality.</span>');
+        let selectorPanelInfoTooltip = RED.popover.tooltip(selectorPanelInfo, selectorPanelInfoTip);
 
         buildPanel = $("<div>").css({
             "overflow": "hidden",
@@ -670,7 +679,7 @@
         $(window).on("focus", resize_panels);
 
         // the flows treeList
-        flowSelector = $("<div>").css({ width: "100%", height: "calc(100% - 37px" }).appendTo(selectorPanel);
+        flowSelector = $("<div>").css({ width: "100% - 8px", height: "calc(100% - 45px)", margin: "4px" }).appendTo(selectorPanel);
         flowSelector.treeList({
             data: flowData,
             multi: true,
@@ -776,6 +785,15 @@
                 RED.nodes.dirty(true);
                 RED.view.updateActive();
                 RED.view.redraw(true);
+
+                let now = new Date().getTime() / 1000;
+                if (now - selectorPanelTipStamp > 300) {
+                    selectorPanelInfoTooltip.open();
+                    selectorPanelTipStamp = now;
+                    setTimeout(function() {
+                        selectorPanelInfoTooltip.close()
+                    }, 7500);
+                }
             }
 
             flows2build = f2b;
