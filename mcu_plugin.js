@@ -173,7 +173,6 @@ function patched_copyObjectProperties(src,dst,copyList,blockList) {
 // *****
 
 let __VERSIONS__ = {};
-let __win32_tools_bit = "32";
 
 module.exports = function(RED) {
 
@@ -249,21 +248,6 @@ module.exports = function(RED) {
         }
     }
 
-    // Try to get the version number of the MODDABLE SDK
-    try {
-
-        let git_describe = "git describe --abbrev=7 --always  --long";
-        let moddable_version = execSync(git_describe, {"cwd": MODDABLE, input: "describe --abbrev=7 --always  --long", encoding: "utf-8"});
-        if (typeof moddable_version == "string" && moddable_version.length > 0) {
-            __VERSIONS__['moddable'] = moddable_version.trim();
-            RED.log.info(`Moddable SDK Version: v${__VERSIONS__.moddable}`);
-        }
-    } catch {}
-
-    // End: "env variable settings ..."
-    // *****
-
-    // *****
     // Check version of MODDABLE tools on Windows
 
     if (os.platform() === "win32") {
@@ -275,15 +259,28 @@ module.exports = function(RED) {
 
         try {
             // This doesn't test for i64 (!!)
-            if (execSync(testcmd, {"encoding": "utf-8"}).indexOf("(x64)") > 0) {
-                __win32_tools_bit = "64"
-            }
+            let test = execSync(testcmd, {"encoding": "utf-8"});
+            __VERSIONS__['x_win'] = (test.indexOf("(x64)") > 0) ? "64" : "32"
         } catch {}
-
-        RED.log.info(`MODDABLE tools are built on ${"32" === __win32_tools_bit ? "x86" : "x64"}.`)
     }
 
-    // End: "Check ..."
+    // Try to get the version number of the MODDABLE SDK
+    try {
+
+        let git_describe = "git describe --abbrev=7 --always  --long";
+        let moddable_version = execSync(git_describe, {"cwd": MODDABLE, input: "describe --abbrev=7 --always  --long", encoding: "utf-8"});
+        if (typeof moddable_version == "string" && moddable_version.length > 0) {
+            __VERSIONS__['moddable'] = moddable_version.trim();
+            
+            if (__VERSIONS__.x_win) {
+                RED.log.info(`Moddable SDK Version: v${__VERSIONS__.moddable} (${"32" === __VERSIONS__.x_win ? "x86" : "x64"})`);
+            } else {
+                RED.log.info(`Moddable SDK Version: v${__VERSIONS__.moddable}`);
+            }
+        }
+    } catch {}
+
+    // End: "env variable settings ..."
     // *****
 
     // *****
@@ -1595,7 +1592,7 @@ module.exports = function(RED) {
                 if (os.platform() === "win32") {
                     // execFile doesn't expand the env variables... ??
                     bcmds = [
-                        `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars${__win32_tools_bit}.bat"`,
+                        `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars${__VERSIONS__.x_win}.bat"`,
                         'pushd %IDF_PATH%',
                         `CALL "${process.env["IDF_TOOLS_PATH"]}\\idf_cmd_init.bat"`,
                         'popd',
