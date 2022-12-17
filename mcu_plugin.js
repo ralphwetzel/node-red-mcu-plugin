@@ -1366,7 +1366,6 @@ module.exports = function(RED) {
             publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable}\n` );
         }
 
-        publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable}\n` );
         publish_stdout(`HOME directory check: ${os.homedir()}\n`);
 
         // create flows.json
