@@ -1358,8 +1358,14 @@ module.exports = function(RED) {
         }
 
         publish_stdout("Starting build process...\n")
-
         publish_stdout(`Host system check: ${os.version()}\n`);
+
+        if (__VERSIONS__.x_win) {
+            publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable} (${"32" === __VERSIONS__.x_win ? "x86" : "x64"})\n` );
+        } else {
+            publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable}\n` );
+        }
+
         publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable}\n` );
         publish_stdout(`HOME directory check: ${os.homedir()}\n`);
 
