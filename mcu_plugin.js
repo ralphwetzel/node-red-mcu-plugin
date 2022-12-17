@@ -173,6 +173,7 @@ function patched_copyObjectProperties(src,dst,copyList,blockList) {
 // *****
 
 let __VERSIONS__ = {};
+let __win32_tools_bit = "32";
 
 module.exports = function(RED) {
 
@@ -262,6 +263,28 @@ module.exports = function(RED) {
     // End: "env variable settings ..."
     // *****
 
+    // *****
+    // Check version of MODDABLE tools on Windows
+
+    if (os.platform() === "win32") {
+        let testcmd = [
+            `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" > nul`,
+            `cd ${MODDABLE}\\build\\bin\\win\\debug`,
+            'dumpbin /headers mcconfig.exe | findstr "machine"'
+        ].join(" && ");
+
+        try {
+            // This doesn't test for i64 (!!)
+            if (execSync(testcmd, {"encoding": "utf-8"}).indexOf("(x64)") > 0) {
+                __win32_tools_bit = "64"
+            }
+        } catch {}
+
+        RED.log.info(`MODDABLE tools are built on ${"32" === __win32_tools_bit ? "x86" : "x64"}.`)
+    }
+
+    // End: "Check ..."
+    // *****
 
     // *****
     // Hook node definitions
@@ -1572,7 +1595,7 @@ module.exports = function(RED) {
                 if (os.platform() === "win32") {
                     // execFile doesn't expand the env variables... ??
                     bcmds = [
-                        `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat"`,
+                        `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars${__win32_tools_bit}.bat"`,
                         'pushd %IDF_PATH%',
                         `CALL "${process.env["IDF_TOOLS_PATH"]}\\idf_cmd_init.bat"`,
                         'popd',
