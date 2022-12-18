@@ -1659,8 +1659,9 @@ module.exports = function(RED) {
                 // https://stackoverflow.com/questions/46072248/node-js-how-to-detect-user-language
                 let locale = Intl.DateTimeFormat().resolvedOptions().locale;
                 switch (locale) {
-                    case "de":
+                    case "de-DE":       // this is 'de' on masOS
                         runner_options['encoding'] = "latin1";
+                        break;
                     default:
                         runner_options['encoding'] = "utf8";
                 }
