@@ -201,7 +201,8 @@ module.exports = function(RED) {
     // env variable settings: Ensure ...
     
     // ... that $MODDABLE is defined.
-    const MODDABLE = process.env.MODDABLE;
+    // path.normalize ensures correct slash type (see issue #11)
+    const MODDABLE = process.env.MODDABLE ? path.normalize(process.env.MODDABLE) : undefined;
     
     if (!MODDABLE) {
         RED.log.error("*** node-red-mcu-plugin -> Error:");
