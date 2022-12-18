@@ -1656,6 +1656,15 @@ module.exports = function(RED) {
 
                 runner_options["windowsHide"] = true;
 
+                // https://stackoverflow.com/questions/46072248/node-js-how-to-detect-user-language
+                let locale = Intl.DateTimeFormat().resolvedOptions().locale;
+                switch (locale) {
+                    case "de":
+                        runner_options['encoding'] = "latin1";
+                    default:
+                        runner_options['encoding'] = "utf8";
+                }
+
                 publish_stdout("Creating build batch file...\n")
                 fs.writeFileSync(path.join(make_dir, "build.bat"), bcmds.join("\r\n"))
                 bcmds = ["build.bat"];
