@@ -1393,6 +1393,10 @@ module.exports = function(RED) {
 
             let n = process.env[name];
             if (n) {
+
+                // ensure the correct path separators
+                n = path.normalize(n);
+                
                 publish_stdout(`$${name} is defined: ${n}\n`)
 
                 // verify that $name declares a valid path.
@@ -1423,6 +1427,9 @@ module.exports = function(RED) {
             if (!n) {
                 throw(`$${name} is not defined.`)
             }
+
+            // ensure the correct path separators
+            n = path.normalize(n);
 
             // path_options can declare as well a file to be checked for existance
             // to be more precise in defining what we expect as "fingerprint" of the env variable setting 
