@@ -1504,6 +1504,14 @@ module.exports = function(RED) {
                         `C:\\Espressif`
                     ]);
                 }
+
+                try {
+                    // This one is a bit different: Take it if defined, yet don't care if not!
+                    env.IDF_PYTHON_ENV_PATH = ensure_env_path("IDF_PYTHON_ENV_PATH", []);
+                } catch(err) {
+                    publish_stdout(err.toString() + '\n');
+                }
+
                 break;
 
             case "pico":
