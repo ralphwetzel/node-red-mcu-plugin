@@ -1,7 +1,7 @@
 {
   "name": "@ralphwetzel/node-red-mcu-plugin",
-  "version": "1.0.0-rc.1",
-  "description": "Plugin to support the Node-RED implementation for Microcontrollers",
+  "version": "1.0.0-rc.2",
+  "description": "Plugin to integrate Node-RED MCU Edition into the Node-RED Editor",
   "node-red": {
     "version": ">=2.0.0 <=3.0.2",
     "plugins": {
@@ -19,7 +19,8 @@
     "node-red",
     "node-red-mcu",
     "Node-RED",
-    "Node-RED MCU Edition"
+    "Node-RED MCU Edition",
+    "node-red-mcu-plugin"
   ],
   "dependencies": {
     "clone": "^2.1.2",
