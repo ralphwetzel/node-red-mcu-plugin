@@ -3,7 +3,10 @@ Plugin to integrate [Node-RED MCU Edition](https://github.com/phoddie/node-red-m
 
 ## Overview
 Node-RED MCU Edition is an implementation of the Node-RED runtime that runs on resource-constrained microcontrollers (MCUs).
-This plugin adds a side panel labeled "MCU" into the Node-RED Editor.
+
+This plugin supports the process to build flows with & for Node-RED MCU edition and interfaces between the Node-RED Editor and a connected MCU.
+
+It adds a side panel labeled "MCU" into the Node-RED Editor.
 
 <img alt="mcu_panel" src="resources/mcu_panel.png"
     style="min-width: 474px; width: 474px; align: center; border: 1px solid lightgray;"/>
