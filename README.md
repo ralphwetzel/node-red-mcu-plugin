@@ -1,5 +1,5 @@
 # node-red-mcu-plugin
-Plugin to support the Node-RED implementation for microcontrollers (MCUs)
+Plugin to integrate Node-RED MCU Edition into the Node-RED Editor.
 
 ## Overview
 This is an endeavor to integrate [node-red-mcu](https://github.com/phoddie/node-red-mcu) into the Node-RED environment.
@@ -11,6 +11,9 @@ The plugin adds a side panel labeled "MCU".
 
 The top section of this side panel allows to select the flows that shall be build for the MCU environment.
 Please be aware that **you have to deploy the selected flows** after you've made your choice.
+
+> Please be aware, that flows dedicated to MCU are in stand-by mode, awaiting an incoming MCU connection.
+> De-select them & deploy again to enable standard Node-RED functionality.
 
 In the bottom section of the side panel, several configurations defining compiler options may be prepared. This allows e.g. to select the target platform or the port used to address a dedicated hardware device. For option reference, see the `mcconfig` [documentation](https://github.com/Moddable-OpenSource/moddable/blob/public/documentation/tools/tools.md#arguments) of the Moddable SDK.
 
@@ -26,20 +29,26 @@ You may follow the build process on the tab `Console Monitor`.
 - [x] Display status message of a node (running @ MCU) in the editor.
 - [x] Forward user trigger (e.g. `inject` node) to MCU.
 - [x] Debug node (from MCU back into the editor).
-- [ ] Create `manifest.json` files for (any kind of) nodes / npm packages.
-- [ ] `manifest.json` [library](#manifestjson) - providing pre-defined build parameters for (node modules and) npm packages
-- [x] Build flows when running Node-RED as service on Raspberry Pi.
+- [x] Create `manifest.json` files for (any kind of) nodes / npm packages.
+- [x] `manifest.json` [library](#manifestjson) - providing pre-defined build parameters for (node modules and) npm packages
 - [x] Include relevant config nodes in the MCU build.
 - [x] Junction node resolving.
 - [x] Link node resolving.
-- [ ] Support for ui_nodes.
+- [x] Support for ui_nodes.
+- [x] Build flows on macOS.
+- [x] Build flows on Windows.
+- [x] Build flows on Linux.
+- [x] Build flows when running Node-RED as service on Raspberry Pi.
+
 
 ## Test Case
-We're able to run this (currently minimalistic) flow @ the MCU simulator and display it's feedback into the Node-RED editor.
+Although it looks minimalistic, the following flow shows most of the funcitonality in action:
 
 <img alt="mcu_example" src="resources/mcu_example.png"
     style="min-width: 474px; width: 474px; align: center; border: 1px solid lightgray;"/>
 
+<details>
+  <summary>flow.json</summary>
 
 ``` json
 [
@@ -112,6 +121,7 @@ We're able to run this (currently minimalistic) flow @ the MCU simulator and dis
     }
 ]
 ```
+</details>
 
 ## Prerequisites
 1) [node-red](https://www.nodered.org)
