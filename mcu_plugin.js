@@ -1041,7 +1041,7 @@ module.exports = function(RED) {
         // Map Node-RED node definitions to node-red-mcu core manifest.json files
 
         // Check directories in node-red-mcu/nodes
-        // Latest check: 20220912/RDW
+        // Latest check: 20221221/RDW
 
         // core: Node of node-red; type -> nr_type_map
         // mcu: Contrib node; module id -> mcu_module_map
@@ -1063,6 +1063,8 @@ module.exports = function(RED) {
         // rpi-neopixels => mcu
         // sensor => package
         // sort => core
+        // split => core
+        // tcp => core
         // template => core
         // trigger => core
         // udp => core (udp in, udp out)
@@ -1086,6 +1088,9 @@ module.exports = function(RED) {
             "join": "join",
             "random": "random",
             "sort": "sort",
+            "split": "split",
+            "tcp in": "tcp",
+            "tcp out": "tcp",
             "template": "template",
             "trigger": "trigger",
             "udp in": "udp",
