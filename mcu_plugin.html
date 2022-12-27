@@ -1454,7 +1454,7 @@
 
                 $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
 
-                $('<div class="mcu-build-option-label">').text("Arguments:").appendTo(row4);
+                let bol = $('<div class="mcu-build-option-label">').text('Config Arguments:').appendTo(row4);
                 let arguments = $('<input>').appendTo(row4)
                 arguments.typedInput({
                     type: "json",
