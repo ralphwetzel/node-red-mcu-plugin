@@ -27,6 +27,7 @@
     "fs-extra": "^10.1.0",
     "log4js": "^6.7.0",
     "nanoid": "<4",
+    "node-abort-controller": "^3.0.0",
     "resolve-package-path": "^4.0.3",
     "serialport": "^10.4.0",
     "x2js": "^3.4.3",
