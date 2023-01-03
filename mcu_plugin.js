@@ -729,24 +729,6 @@ module.exports = function(RED) {
         let dest = working_directory ?? fs.mkdtempSync(path.join(os.tmpdir(), app_name));
         fs.ensureDirSync(dest);
 
-
-        let mainjs = [
-            'import "nodered";	// import for global side effects',
-        ];
-        let mainjs_end = [
-            'import flows from "flows";',
-            'RED.build(flows);',
-        ]
-
-        let mainjs_ui_end = [
-            'import flows from "flows";',
-            'import buildModel from "./ui_nodes";',
-            'import { REDApplication }  from "./ui_templates";',
-            'RED.build(flows);',
-            'const model = buildModel();',
-            // 'export default new REDApplication(model, { commandListLength:8192, displayListLength:8192+4096, touchCount:1, pixels: 240 * 64 });'
-        ]
-        
         // Create and initialize the manifest builder
         let mcu_nodes_root = path.resolve(__dirname, "./mcu_modules");
         let manifest = new mcuManifest.builder(library, mcu_nodes_root);
@@ -1113,6 +1095,9 @@ module.exports = function(RED) {
             "node-red-node-pi-neopixel": mcu_manifest("rpi-neopixels"),    // Att: this is pixel vs. pixel"s"
         }
 
+        // To prepare main.js
+        let mainjs_additional_imports = [];
+
         nodes.forEach(function(n) {
 
             // clean the config from the _mcu flag
@@ -1165,7 +1150,7 @@ module.exports = function(RED) {
             p = manifest.create_manifests_for_module(module, dest, n.type)
             if (p && typeof(p) === "string") {
                 manifest.include_manifest(p);
-                mainjs.push(`import "${module}"`);
+                mainjs_additional_imports.push(`import "${module}";`);
             }
 
         });
@@ -1176,6 +1161,7 @@ module.exports = function(RED) {
         }
 
         // UI_Nodes support
+        let app_options;
         if (ui_support_demand_confirmed && options.ui) {
 
             // add ui_base node to the group of nodes to be exported!
@@ -1288,19 +1274,34 @@ module.exports = function(RED) {
             manifest.include_manifest("$(MCUROOT)/nodes/random/manifest.json");
             manifest.include_manifest("$(MCUROOT)/nodes/trigger/manifest.json");
 
-            // Dedicated main.js
-            mainjs.push(...mainjs_ui_end);
-            
-            let app_options = {
+            app_options = {
                 commandListLength: options.cll,
                 displayListLength: options.dll,
                 touchCount: options.tc,
                 pixels: options.px * options.py
             }
 
-            mainjs.push(`export default new REDApplication(model, ${JSON.stringify(app_options)});`);
-        } else {
-            mainjs.push(...mainjs_end);
+        }
+
+        // Create main.js
+
+        let mainjs = [
+            'import "nodered";	// import for global side effects',
+            'import flows from "flows";'
+        ]
+        mainjs.push(...mainjs_additional_imports);
+        if (ui_support_demand_confirmed) {
+            mainjs.push(...[
+                'import buildModel from "./ui_nodes";',
+                'import { REDApplication }  from "./ui_templates";'
+            ])
+        }
+        mainjs.push('RED.build(flows);');
+        if (ui_support_demand_confirmed) {
+            mainjs.push(...[
+                'const model = buildModel();',
+                `new REDApplication(model, ${JSON.stringify(app_options)});`
+            ])
         }
 
         // Write the main.js file
