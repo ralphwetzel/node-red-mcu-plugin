@@ -723,46 +723,9 @@ module.exports = function(RED) {
     // The AbortController for runner_promise
     let runner_abort;
 
-    function make_build_environment(working_directory, options) {
+    function consolidate_mcu_nodes(with_ui_support) {
 
-        // Create target directory
-        let dest = working_directory ?? fs.mkdtempSync(path.join(os.tmpdir(), app_name));
-        fs.ensureDirSync(dest);
-
-        // Create and initialize the manifest builder
-        let mcu_nodes_root = path.resolve(__dirname, "./mcu_modules");
-        let manifest = new mcuManifest.builder(library, mcu_nodes_root);
-        manifest.initialize();
-
-        manifest.resolver_paths = [
-            require.main.path,
-            RED.settings.userDir
-        ]
-
-        // Try to make this the first entry - before the includes!
-
-        // Add MODULES build path
-        const mbp = path.resolve(MODDABLE, "./modules");
-        manifest.add_build("MODULES", mbp);
-
-        // Add root manifest from node-red-mcu
-        // ToDo: node-red-mcu shall be a npm package as well - soon!
-        const root_manifest_path = "./node-red-mcu"
-        let rmp = path.resolve(__dirname, root_manifest_path);
-        manifest.add_build("MCUROOT", rmp);
-        manifest.include_manifest("$(MCUROOT)/manifest_runtime.json")
-
-        // Add platform specific manifest - if there is one!
-        let platform = options.platform.split("/");
-        if (platform && platform[0].length > 0) {
-            const platform_manifest_path = "./platforms";
-            const pmp = path.resolve(__dirname, platform_manifest_path, platform[0], "manifest.json");
-            if (fs.existsSync(pmp)) {
-                manifest.include_manifest(pmp);
-            }
-        }
-
-        // Make the flows.json file & add manifests of the nodes
+        // Select the nodes to build flows.json
         let nodes = [];
         let configNodes = {};
 
@@ -790,18 +753,9 @@ module.exports = function(RED) {
 
                 let n = clone(nn);
 
-                if (n.type == "tab" && n._mcu?.manifest?.trim?.().length>0) {
-                    // Write the flow's manifest.json
-                    fs.writeFileSync(path.join(dest, `manifest_${n.id}.json`), n._mcu.manifest.trim(), (err) => {
-                        if (err) {
-                            throw err;
-                        }
-                    });
-                    manifest.include_manifest(`./manifest_${n.id}.json`)
-                }
-
+                // ToDo: We have to find an alternative logic for this!!
                 let running_node = RED.nodes.getNode(n.id);
-                running_node?.emit("build4mcu", n, manifest);
+                running_node?.emit("build4mcu", n, /*manifest*/);
 
                 // add node to flows.json
                 nodes.push(n);
@@ -1009,160 +963,8 @@ module.exports = function(RED) {
             }
         }
 
-        // resolve core nodes directory => "@node-red/nodes"
-        for (let i=0; i<manifest.resolver_paths.length; i+=1) {
-            let pp = resolve_package_path("@node-red/nodes", manifest.resolver_paths[i]);
-            if (pp) {
-                manifest.add_build("REDNODES", path.dirname(pp));
-            }
-        }
-
-        let ui_support_demand_confirmed = false;
-
-        // *****
-        // Map Node-RED node definitions to node-red-mcu core manifest.json files
-
-        // Check directories in node-red-mcu/nodes
-        // Latest check: 20221221/RDW
-
-        // core: Node of node-red; type -> nr_type_map
-        // mcu: Contrib node; module id -> mcu_module_map
-        // package: Has dedicated package.json; no action
-
-        // audioout => package
-        // batch => core
-        // csv => core
-        // delay => core
-        // file => core (file, file in)
-        // httprequest => core (http request)
-        // httpserver => core (hhtp in, http response)
-        // join => core
-        // lower-case => package
-        // openweathermap => mcu
-        // random => core
-        // rpi-ds18b20 => mcu
-        // rpi-gpio => mcu
-        // rpi-neopixels => mcu
-        // sensor => package
-        // sort => core
-        // split => core
-        // tcp => core
-        // template => core
-        // trigger => core
-        // udp => core (udp in, udp out)
-        // ui => DEDICATED HANDLING
-        // websocketnodes => core (websocket-client, websocket-listener, websocket in, websocket out)
-
-        function mcu_manifest(name) {
-            return `$(MCUROOT)/nodes/${name}/manifest.json`
-        }
-
-        // need to map here every type covered
-        const nr_type_map = {
-            "batch": "batch",
-            "csv": "csv",
-            "delay": "delay",
-            "file": "file",
-            "file in": "file",
-            "http request": "httprequest",
-            "http in": "httpserver",
-            "http response": "httpserver",
-            "join": "join",
-            "random": "random",
-            "sort": "sort",
-            "split": "split",
-            "tcp in": "tcp",
-            "tcp out": "tcp",
-            "template": "template",
-            "trigger": "trigger",
-            "udp in": "udp",
-            "udp out": "udp",
-            "websocket-client": "websocketnodes",
-            "websocket-listener": "websocketnodes",
-            "websocket in": "websocketnodes",
-            "websocket out": "websocketnodes",
-        }
-
-        // always map the (full) module
-        const mcu_module_map = {
-
-            "node-red-node-openweathermap": mcu_manifest("openweathermap"),
-
-            // https://github.com/bpmurray/node-red-contrib-ds18b20-sensor
-            "node-red-contrib-ds18b20-sensor": mcu_manifest("rpi-ds18b20"),
-            
-            "node-red-node-pi-gpio": mcu_manifest("rpi-gpio"),
-            "node-red-node-pi-neopixel": mcu_manifest("rpi-neopixels"),    // Att: this is pixel vs. pixel"s"
-        }
-
-        // To prepare main.js
-        let mainjs_additional_imports = [];
-
-        nodes.forEach(function(n) {
-
-            // clean the config from the _mcu flag
-            if (n._mcu) {
-                delete n._mcu;
-            }
-
-            // verify that a manifest is available, create stubs for missing ones
-            let node = library.get_node(n.type);
-            if (!node) return;
-
-            let module = node.module;
-            if (!module) return;
-            
-            if (module === "node-red") {
-                if (n.type in nr_type_map) {
-                    manifest.include_manifest(mcu_manifest(nr_type_map[n.type]));
-                }
-                else {
-                    // Not adding any additional manifest for Node-RED core nodes.
-                }
-                return;
-
-            } else if (module in mcu_module_map) {
-                // mcu_module_map already defines path to manifest.json
-                manifest.include_manifest(mcu_module_map[module]);
-                return;
-
-            } else if (module === "node-red-dashboard") {
-                if (!options.ui) {
-                    throw Error("This flow uses UI nodes - yet UI support is diabled. Please enable UI support.")
-                }
-
-                ui_support_demand_confirmed = true;
-                return;
-
-            } else if (module.indexOf("node-red-node-ui-") === 0) {
-                throw Error(`Node type '${module}' currently not supported on MCU.`)
-            }
-
-            if (manifest.resolver_paths.indexOf(node.path) < 0) {
-                manifest.resolver_paths.push(node.path)
-            }
-
-            let p = manifest.get_manifest_of_module(module, dest);
-            if (p && typeof(p) === "string") {
-                manifest.include_manifest(p);
-                return;
-            }
-            p = manifest.create_manifests_for_module(module, dest, n.type)
-            if (p && typeof(p) === "string") {
-                manifest.include_manifest(p);
-                mainjs_additional_imports.push(`import "${module}";`);
-            }
-
-        });
-
-        // Check if there is any node to be build
-        if (nodes.length < 1) {
-            throw Error("No flow to build.")
-        }
-
-        // UI_Nodes support
-        let app_options;
-        if (ui_support_demand_confirmed && options.ui) {
+        // Add UI support
+        if (with_ui_support) {
 
             // add ui_base node to the group of nodes to be exported!
             if (!ui_base) {
@@ -1266,6 +1068,206 @@ module.exports = function(RED) {
             }
 
             nodes.push(ui_base);
+        }
+
+        return nodes;
+    }
+
+    function make_build_environment(working_directory, options) {
+
+        let nodes = consolidate_mcu_nodes(options.ui);
+
+        // Create target directory
+        let dest = working_directory ?? fs.mkdtempSync(path.join(os.tmpdir(), app_name));
+        fs.ensureDirSync(dest);
+
+        // Create and initialize the manifest builder
+        let mcu_nodes_root = path.resolve(__dirname, "./mcu_modules");
+        let manifest = new mcuManifest.builder(library, mcu_nodes_root);
+        manifest.initialize();
+
+        manifest.resolver_paths = [
+            require.main.path,
+            RED.settings.userDir
+        ]
+
+        // Try to make this the first entry - before the includes!
+
+        // Add MODULES build path
+        const mbp = path.resolve(MODDABLE, "./modules");
+        manifest.add_build("MODULES", mbp);
+
+        // Add root manifest from node-red-mcu
+        // ToDo: node-red-mcu shall be a npm package as well - soon!
+        const root_manifest_path = "./node-red-mcu"
+        let rmp = path.resolve(__dirname, root_manifest_path);
+        manifest.add_build("MCUROOT", rmp);
+        manifest.include_manifest("$(MCUROOT)/manifest_runtime.json")
+
+        // resolve core nodes directory => "@node-red/nodes"
+        for (let i=0; i<manifest.resolver_paths.length; i+=1) {
+            let pp = resolve_package_path("@node-red/nodes", manifest.resolver_paths[i]);
+            if (pp) {
+                manifest.add_build("REDNODES", path.dirname(pp));
+            }
+        }
+
+        let ui_support_demand_confirmed = false;
+
+        // *****
+        // Map Node-RED node definitions to node-red-mcu core manifest.json files
+
+        // Check directories in node-red-mcu/nodes
+        // Latest check: 20221221/RDW
+
+        // core: Node of node-red; type -> nr_type_map
+        // mcu: Contrib node; module id -> mcu_module_map
+        // package: Has dedicated package.json; no action
+
+        // audioout => package
+        // batch => core
+        // csv => core
+        // delay => core
+        // file => core (file, file in)
+        // httprequest => core (http request)
+        // httpserver => core (hhtp in, http response)
+        // join => core
+        // lower-case => package
+        // openweathermap => mcu
+        // random => core
+        // rpi-ds18b20 => mcu
+        // rpi-gpio => mcu
+        // rpi-neopixels => mcu
+        // sensor => package
+        // sort => core
+        // split => core
+        // tcp => core
+        // template => core
+        // trigger => core
+        // udp => core (udp in, udp out)
+        // ui => DEDICATED HANDLING
+        // websocketnodes => core (websocket-client, websocket-listener, websocket in, websocket out)
+
+        function mcu_manifest(name) {
+            return `$(MCUROOT)/nodes/${name}/manifest.json`
+        }
+
+        // need to map here every type covered
+        const nr_type_map = {
+            "batch": "batch",
+            "csv": "csv",
+            "delay": "delay",
+            "file": "file",
+            "file in": "file",
+            "http request": "httprequest",
+            "http in": "httpserver",
+            "http response": "httpserver",
+            "join": "join",
+            "random": "random",
+            "sort": "sort",
+            "split": "split",
+            "tcp in": "tcp",
+            "tcp out": "tcp",
+            "template": "template",
+            "trigger": "trigger",
+            "udp in": "udp",
+            "udp out": "udp",
+            "websocket-client": "websocketnodes",
+            "websocket-listener": "websocketnodes",
+            "websocket in": "websocketnodes",
+            "websocket out": "websocketnodes",
+        }
+
+        // always map the (full) module
+        const mcu_module_map = {
+
+            "node-red-node-openweathermap": mcu_manifest("openweathermap"),
+
+            // https://github.com/bpmurray/node-red-contrib-ds18b20-sensor
+            "node-red-contrib-ds18b20-sensor": mcu_manifest("rpi-ds18b20"),
+            
+            "node-red-node-pi-gpio": mcu_manifest("rpi-gpio"),
+            "node-red-node-pi-neopixel": mcu_manifest("rpi-neopixels"),    // Att: this is pixel vs. pixel"s"
+        }
+
+        // To prepare main.js
+        let mainjs_additional_imports = [];
+
+        nodes.forEach(function (n) {
+
+            if (n.type == "tab" && n._mcu?.manifest?.trim?.().length > 0) {
+                // Write the flow's manifest.json
+                fs.writeFileSync(path.join(dest, `manifest_${n.id}.json`), n._mcu.manifest.trim(), (err) => {
+                    if (err) {
+                        throw err;
+                    }
+                });
+                manifest.include_manifest(`./manifest_${n.id}.json`)
+            }
+
+            // clean the config from the _mcu flag
+            if (n._mcu) {
+                delete n._mcu;
+            }
+
+            // verify that a manifest is available, create stubs for missing ones
+            let node = library.get_node(n.type);
+            if (!node) return;
+
+            let module = node.module;
+            if (!module) return;
+            
+            if (module === "node-red") {
+                if (n.type in nr_type_map) {
+                    manifest.include_manifest(mcu_manifest(nr_type_map[n.type]));
+                }
+                else {
+                    // Not adding any additional manifest for Node-RED core nodes.
+                }
+                return;
+
+            } else if (module in mcu_module_map) {
+                // mcu_module_map already defines path to manifest.json
+                manifest.include_manifest(mcu_module_map[module]);
+                return;
+
+            } else if (module === "node-red-dashboard") {
+                if (!options.ui) {
+                    throw Error("This flow uses UI nodes - yet UI support is diabled. Please enable UI support.")
+                }
+
+                ui_support_demand_confirmed = true;
+                return;
+
+            } else if (module.indexOf("node-red-node-ui-") === 0) {
+                throw Error(`Node type '${module}' currently not supported on MCU.`)
+            }
+
+            if (manifest.resolver_paths.indexOf(node.path) < 0) {
+                manifest.resolver_paths.push(node.path)
+            }
+
+            let p = manifest.get_manifest_of_module(module, dest);
+            if (p && typeof(p) === "string") {
+                manifest.include_manifest(p);
+                return;
+            }
+            p = manifest.create_manifests_for_module(module, dest, n.type)
+            if (p && typeof(p) === "string") {
+                manifest.include_manifest(p);
+                mainjs_additional_imports.push(`import "${module}";`);
+            }
+
+        });
+
+        // Check if there is any node to be build
+        if (nodes.length < 1) {
+            throw Error("No flow to build.")
+        }
+
+        // UI_Nodes support
+        let app_options;
+        if (ui_support_demand_confirmed && options.ui) {
 
             // Dedicated includes
             manifest.include_manifest("$(MCUROOT)/nodes/ui/manifest.json");
@@ -1632,7 +1634,10 @@ module.exports = function(RED) {
                         '   echo ">> $@"',
                         '   eval "$@"',
                         '}',
-                        'runthis "source "$IDF_PATH/export.sh""',
+                        // 'echo "$PATH"',
+                        // 'runthis "source "$IDF_PATH/export.sh""',
+                        // 'echo "$PATH"',
+                        'echo ">> IDF_PYTHON_ENV_PATH: $IDF_PYTHON_ENV_PATH"',
                         `runthis "${cmd}"`
                     ]
                 }
