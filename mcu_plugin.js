@@ -1112,7 +1112,7 @@ module.exports = function(RED) {
             }
         }
 
-        let ui_support_demand_confirmed = false;
+        let nodes_demanding_ui_support = 0;
 
         // *****
         // Map Node-RED node definitions to node-red-mcu core manifest.json files
@@ -1236,7 +1236,7 @@ module.exports = function(RED) {
                     throw Error("This flow uses UI nodes - yet UI support is diabled. Please enable UI support.")
                 }
 
-                ui_support_demand_confirmed = true;
+                nodes_demanding_ui_support += 1;
                 return;
 
             } else if (module.indexOf("node-red-node-ui-") === 0) {
@@ -1267,7 +1267,7 @@ module.exports = function(RED) {
 
         // UI_Nodes support
         let app_options;
-        if (ui_support_demand_confirmed && options.ui) {
+        if (options.ui && nodes_demanding_ui_support > 1) {
 
             // Dedicated includes
             manifest.include_manifest("$(MCUROOT)/nodes/ui/manifest.json");
@@ -1283,6 +1283,18 @@ module.exports = function(RED) {
                 pixels: options.px * options.py
             }
 
+        } else {
+            // If the operator sets "UI Support" despite it's not necessary,
+            // ui_base was already added.
+            // Thus we remove it here again if present - as not necessary!
+            let i = nodes.findIndex( (n) => { 
+                "ui_base" == n.type; 
+            })
+            if (0 > i) {
+                nodes.splice(i, 1);
+            }
+
+            nodes_demanding_ui_support = 0;
         }
 
         // Create main.js
@@ -1292,14 +1304,14 @@ module.exports = function(RED) {
             'import flows from "flows";'
         ]
         mainjs.push(...mainjs_additional_imports);
-        if (ui_support_demand_confirmed) {
+        if (nodes_demanding_ui_support) {
             mainjs.push(...[
                 'import buildModel from "./ui_nodes";',
                 'import { REDApplication }  from "./ui_templates";'
             ])
         }
         mainjs.push('RED.build(flows);');
-        if (ui_support_demand_confirmed) {
+        if (nodes_demanding_ui_support) {
             mainjs.push(...[
                 'const model = buildModel();',
                 `new REDApplication(model, ${JSON.stringify(app_options)});`
