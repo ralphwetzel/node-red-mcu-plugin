@@ -973,7 +973,7 @@ module.exports = function(RED) {
                 // rather than throwing here, we try to create a minimal / standard replacement node
 
                 ui_base = {
-                    id: RED.nodes.id(),
+                    id: RED.util.generateId(),
                     type: "ui_base",
                     theme: {
                         name: "theme-dark",
