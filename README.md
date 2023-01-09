@@ -133,7 +133,10 @@ Although it looks minimalistic, the following flow shows most of the funcitonali
 
 ``` bash
 cd <userDir>
-npm install https://github.com/ralphwetzel/node-red-mcu-plugin
+```
+then
+```bash
+npm install @ralphwetzel/node-red-mcu-plugin
 ```
 
 > This installs as well [node-red-mcu](https://github.com/phoddie/node-red-mcu).
@@ -187,11 +190,6 @@ git submodule update
 ```
 
 Please be advised that updating the toolchain in that way could have sideeffects that cannot be predicted & might lead you into additional trouble! Thus: take care!
-
-## Next Steps / To Do List
-- [ ] Add further Node.js modules
-- [ ] Provide better support for CommonJS modules
-- [ ] Bug fixing! :sweat_smile:
 
 ## Technical Details
 
