@@ -172,6 +172,18 @@ function patched_copyObjectProperties(src,dst,copyList,blockList) {
 //
 // *****
 
+// *****
+// *
+// * Currently used EXPERIMENTAL Flags:
+// *
+// * 1: Mod Build Support
+// * 2: -- (next free)
+// * 4: ...
+//
+// * => This is tested as bit field!
+// *****
+let MCU_EXPERIMENTAL = process.env['MCU_EXPERIMENTAL'];
+
 let __VERSIONS__ = {};
 
 module.exports = function(RED) {
@@ -1073,9 +1085,7 @@ module.exports = function(RED) {
         return nodes;
     }
 
-    function make_build_environment(working_directory, options) {
-
-        let nodes = consolidate_mcu_nodes(options.ui);
+    function make_build_environment(nodes, working_directory, options) {
 
         // Create target directory
         let dest = working_directory ?? fs.mkdtempSync(path.join(os.tmpdir(), app_name));
@@ -1341,9 +1351,13 @@ module.exports = function(RED) {
         // add our flows.json
         manifest.add_module({"source": "./flows", "transform": "nodered2mcu"})
 
-        if (options?.creation) {
-            let c = JSON.parse(options.creation)
-            manifest.add(c, "creation");
+        if ((MCU_EXPERIMENTAL & 1) && (options.buildmode == "1") && (options.mod_mode == "mod")) {
+            // currently omit for Mods
+        } else {
+            if (options?.creation) {
+                let c = JSON.parse(options.creation)
+                manifest.add(c, "creation");
+            }
         }
 
         // enable editor message transmossion by the MCU
@@ -1363,7 +1377,99 @@ module.exports = function(RED) {
     
     }
 
-    function build_flows(options, publish) {
+    function make_host_environment(nodes, working_directory, options) {
+
+        // Create target directory
+        let dest = working_directory ?? fs.mkdtempSync(path.join(os.tmpdir(), app_name));
+        fs.ensureDirSync(dest);
+
+        // Create and initialize the manifest builder
+        let mcu_nodes_root = path.resolve(__dirname, "./mcu_modules");
+        let manifest = new mcuManifest.builder(library, mcu_nodes_root);
+        manifest.initialize();
+
+        manifest.resolver_paths = [
+            require.main.path,
+            RED.settings.userDir
+        ]
+        
+        // Try to make this the first entry - before the includes!
+
+        // Add MODULES build path
+        const mbp = path.resolve(MODDABLE, "./modules");
+        manifest.add_build("MODULES", mbp);
+
+        // Add root manifest from node-red-mcu
+        // ToDo: node-red-mcu shall be a npm package as well - soon!
+        const root_manifest_path = "./node-red-mcu"
+        let rmp = path.resolve(__dirname, root_manifest_path);
+        manifest.add_build("MCUROOT", rmp);
+        manifest.include_manifest("$(MCUROOT)/manifest_host.json")
+
+        // Create main.js
+
+        let mainjs = [
+            'import "nodered";	// import for global side effects',
+            'import Modules from "modules";',
+            'import config from "mc/config";',
+            '',
+            'if (Modules.has("flows")) {',
+            '    const flows = Modules.importNow("flows");',
+            '    RED.build(flows);',
+            '}',
+            'else {',
+            '   if (config.noderedmcu?.editor) {',
+			`       trace.left('{"state": "mod_waiting"}', "NR_EDITOR");`,
+            '   } else {',
+            '    trace("No flows installed.\\n");',
+            '   }',
+            '}'
+        ]
+
+        // Write the main.js file
+        fs.writeFileSync(path.join(dest, "main.js"), mainjs.join("\r\n"), (err) => {
+            if (err) {
+                throw err;
+            }
+        });
+
+        manifest.add_module("./main");
+
+        // enable editor message transmossion by the MCU
+        let editor_transmission_on = { "noderedmcu": { "editor": true }};
+        manifest.add(editor_transmission_on, "config");
+
+        // enable Mods
+        manifest.add({ "XS_MODS": 1 }, "defines");
+
+        // add strip definition
+        let strips = [
+            "Atomics",
+            "eval",
+            "FinalizationRegistry",
+            "Function",
+            "Generator",
+            "RegExp",
+            "WeakMap",
+            "WeakRef",
+            "WeakSet"
+        ]
+        manifest.add(strips, "strip");
+
+        let m = manifest.get();
+
+        // Write the (root) manifest.json
+        fs.writeFileSync(path.join(dest, "manifest.json"), manifest.get(), (err) => {
+            if (err) {
+                throw err;
+            }
+        });
+
+        return dest;
+
+    }
+
+    function build_flows(nodes, options, publish) {
 
         options = options ?? {};
 
@@ -1476,7 +1582,20 @@ module.exports = function(RED) {
         fs.emptyDirSync(make_dir)
 
         try {
-            make_build_environment(make_dir, options);
+            if ((MCU_EXPERIMENTAL & 1) && (options.buildmode == "1")) {
+                switch (options.mod_mode) {
+                    case "host":
+                        make_host_environment(nodes, make_dir, options);
+                        break;
+                    case "mod":
+                        make_build_environment(nodes, make_dir, options);
+                        break;
+                    default:
+                        throw "For ModSupport, mod_mode = 'host' | 'mod' shall be defined."
+                }
+            } else {
+                make_build_environment(nodes, make_dir, options);
+            }
         } catch (err) {
             publish_stderr(err.toString() + "\n");
             return Promise.reject(err);
@@ -1568,6 +1687,11 @@ module.exports = function(RED) {
         }
 
         let cmd = "mcconfig"
+        if ((MCU_EXPERIMENTAL & 1) && (options.buildmode == "1")) {
+            if (options.mod_mode == "mod") {
+                cmd = "mcrun";
+            }
+        }
 
         if (options.debug === true) {
             cmd += " -d";
@@ -1594,8 +1718,12 @@ module.exports = function(RED) {
             cmd += " -r " + options.rotation;
         }
 
-        if (options.buildtarget) {
-            cmd += " -t " + options.buildtarget;
+        if ((MCU_EXPERIMENTAL && 1) && (options.buildmode == "1") && (options.mod_mode == "mod")) {
+            // no -t option for Mods
+        } else {
+            if (options.buildtarget) {
+                cmd += " -t " + options.buildtarget;
+            }    
         }
 
         {
@@ -1647,7 +1775,7 @@ module.exports = function(RED) {
                         '   eval "$@"',
                         '}',
                         // 'echo "$PATH"',
-                        // 'runthis "source "$IDF_PATH/export.sh""',
+                        'runthis "source "$IDF_PATH/export.sh""',
                         // 'echo "$PATH"',
                         'echo ">> IDF_PYTHON_ENV_PATH: $IDF_PYTHON_ENV_PATH"',
                         `runthis "${cmd}"`
@@ -1817,20 +1945,30 @@ module.exports = function(RED) {
 
             RED.httpAdmin.post(`${apiRoot}/build`, routeAuthHandler, (req, res) => {
                 
-                let build_options = req.body.options
-                if (!build_options) {
+                let options = req.body.options
+                if (!options) {
                     res.status(400).end();
                     return;
                 }
 
                 let mode = req.body.mode;
                 if (mode === "reconnect") {
-                    build_options.buildtarget = "xsbug";
+                    options.buildtarget = "xsbug";
+                }
+
+                let nodes = consolidate_mcu_nodes(options.ui);
+
+                if (mode == "host") {
+                    options.mod_mode = "host"
+                }
+
+                if (mode == "mod") {
+                    options.mod_mode = "mod"
                 }
 
                 // *** Is this a valid assumption?
-                if (!build_options.make) {
-                    build_options.make = true;
+                if (!options.make) {
+                    options.make = true;
                 }
                 // ***
 
@@ -1925,7 +2063,7 @@ module.exports = function(RED) {
                                 } else if (from.length > 6) {
                                     let c = from.substring(0, 6);
                                     let c_id = from.substring(6);
-                                    if (c === "config" && c_id == build_options.id) {
+                                    if (c === "config" && c_id == options.id) {
                                         msg = "Simulator is initializing...";
                                     }
                                 }
@@ -1947,6 +2085,13 @@ module.exports = function(RED) {
                             options = { timeout: 5000 };
                             break;
 
+                        case "mod_waiting":
+                            if (MCU_EXPERIMENTAL & 1) {
+                                msg = "Host is ready. Waiting for flows to be installed.";
+                                options = { timeout: 5000 };
+                                break;    
+                            }
+
                         default:
                             return;
 
@@ -1962,7 +2107,7 @@ module.exports = function(RED) {
                 })
 
                 try {
-                    runner_promise = build_flows(build_options, RED.comms.publish)
+                    runner_promise = build_flows(nodes, options, RED.comms.publish)
                     .then( () => {
                         res.status(200).end();
                     })
@@ -1989,7 +2134,8 @@ module.exports = function(RED) {
             RED.httpAdmin.get(`${apiRoot}/config/plugin`, routeAuthHandler, (req, res) => {
                 let c = {
                     "platforms": mcu_plugin_config.platforms,
-                    "ports": mcu_plugin_config.ports
+                    "ports": mcu_plugin_config.ports,
+                    "experimental": MCU_EXPERIMENTAL ?? 0
                 }
                 res.status(200).end(JSON.stringify(c), "utf8")
             })

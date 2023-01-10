@@ -268,6 +268,7 @@
         platform: "sim/moddable_one",
         port: "",
         more: false,
+        buildmode: "0",     // EXPERIMENTAL
         buildtarget: "all",
         debug: true,
         release: false,
@@ -332,7 +333,8 @@
 
     let mcu_plugin_config = {
         "platforms": [],
-        "ports": []
+        "ports": [],
+        "experimental": 0
     };
 
     /******
@@ -474,7 +476,7 @@
                 }
 
                 try {
-                    _onAdd();
+                    _onAdd(mcu_plugin_config.experimental);
                 }
                 catch(error) {
                     console.error(error);
@@ -490,7 +492,9 @@
         }
     })
 
-    function _onAdd() {
+    function _onAdd(MCU_EXPERIMENTAL) {
+
+        MCU_EXPERIMENTAL ??= 0;
 
         RED.events.on("flows:add", onFlowAdd)
         RED.events.on("flows:remove", onObjectRemove)
@@ -1178,7 +1182,11 @@
                     "margin-right": "0px",
                     "line-height": "25px"
                 }).on("click", function() {
-                    launch_build();
+                    if (MCU_EXPERIMENTAL & 1) {
+                        launch_build(data.buildmode == "1" ? "mod" : undefined);
+                    } else {
+                        launch_build();
+                    }
                 })
 
                 let bbd = $('<a id="mcu-plugin-build-select" href="#">').appendTo(bb);
@@ -1206,6 +1214,16 @@
                             }
                         }
                     ]
+                    if (MCU_EXPERIMENTAL & 1) {
+                        if (data.buildmode == "1") {
+                            options.push({
+                                label: $(`<span>Build host...</span>`),
+                                onselect: function () {
+                                    launch_build("host");
+                                }
+                            })
+                        }
+                    }
                     let menu = RED.popover.menu({
                         options: options,
                     });
@@ -1392,6 +1410,32 @@
                 }
 
                 let row4 = $('<div>').css({ "margin-top": "4px" }).appendTo(inputRows).hide();
+
+                let buildmode;
+                if (MCU_EXPERIMENTAL & 1) {
+                    $('<div class="mcu-build-option-label">').text("Build Mode:").appendTo(row4);
+                    buildmode = $('<input>').appendTo(row4)
+                    buildmode.typedInput({
+                        type: "buildmode",
+                        types: [{
+                            value: "buildmode",
+                            options: [
+                                { value: "0", label: "Full Build" },
+                                { value: "1", label: "Mod Support" },
+                            ],
+                        }],
+                    }).on('change', function (event, type, value) {
+                        if (initializing === false) {
+                            data.buildmode = value;
+                            persist_config();
+                        }
+                    });
+                    buildmode.next().css({ "width": "auto" });
+                    $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
+
+                } else {
+                    delete buildmode;
+                }
 
                 $('<div class="mcu-build-option-label">').text("Build Target:").appendTo(row4);
                 let buildtarget = $('<input>').appendTo(row4)
@@ -1677,6 +1721,9 @@
                 plug.typedInput("value", data.port);
                 plug.typedInput("validate");
                 set_more_options_style()    // data.more
+                if (MCU_EXPERIMENTAL & 1) { 
+                    buildmode.typedInput("value", data.buildmode); 
+                }
                 buildtarget.typedInput("value", data.buildtarget);
                 {
                     let _instr = [];
