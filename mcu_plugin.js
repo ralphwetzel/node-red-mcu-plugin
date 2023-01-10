@@ -1290,7 +1290,7 @@ module.exports = function(RED) {
             let i = nodes.findIndex( (n) => { 
                 "ui_base" == n.type; 
             })
-            if (0 > i) {
+            if (-1 < i) {
                 nodes.splice(i, 1);
             }
 
