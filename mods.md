@@ -32,4 +32,4 @@ The host will report ready & waiting for the upload of flows when build & flashe
 After selecting `Mod Support` as build mode, building Mods is as easy as clicking the Build button.
 
 ## ToDos
-[ ] Provide better creation params to give the mod enough space to be uploaded.
+- [ ] Provide better creation params to give the mod enough space to be uploaded.
