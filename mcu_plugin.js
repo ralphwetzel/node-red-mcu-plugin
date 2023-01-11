@@ -1112,7 +1112,12 @@ module.exports = function(RED) {
         const root_manifest_path = "./node-red-mcu"
         let rmp = path.resolve(__dirname, root_manifest_path);
         manifest.add_build("MCUROOT", rmp);
-        manifest.include_manifest("$(MCUROOT)/manifest_runtime.json")
+
+        if (options._mode !== "mod") {
+            // don't for Mods
+            manifest.include_manifest("$(MCUROOT)/manifest_runtime.json")
+        }
+
 
         // resolve core nodes directory => "@node-red/nodes"
         for (let i=0; i<manifest.resolver_paths.length; i+=1) {
@@ -1328,15 +1333,17 @@ module.exports = function(RED) {
             ])
         }
 
-        // Write the main.js file
-        fs.writeFileSync(path.join(dest, "main.js"), mainjs.join("\r\n"), (err) => {
-            if (err) {
-                throw err;
-            }
-        });
+        if (options._mode !== "mod") {
+            // Write the main.js file
+            fs.writeFileSync(path.join(dest, "main.js"), mainjs.join("\r\n"), (err) => {
+                if (err) {
+                    throw err;
+                }
+            });
 
-        manifest.add_module("./main")
-
+            manifest.add_module("./main")
+        }
+        
         // In case this is going to be changed again ;)
         let flows_file_data = JSON.stringify(nodes, null, 2)
         let flows_file_name = "flows.json"
@@ -1351,9 +1358,8 @@ module.exports = function(RED) {
         // add our flows.json
         manifest.add_module({"source": "./flows", "transform": "nodered2mcu"})
 
-        if ((MCU_EXPERIMENTAL & 1) && (options.buildmode == "1") && (options.mod_mode == "mod")) {
+        if (options._mode !== "mod") {
             // currently omit for Mods
-        } else {
             if (options?.creation) {
                 let c = JSON.parse(options.creation)
                 manifest.add(c, "creation");
@@ -1421,7 +1427,7 @@ module.exports = function(RED) {
             '   if (config.noderedmcu?.editor) {',
 			`       trace.left('{"state": "mod_waiting"}', "NR_EDITOR");`,
             '   } else {',
-            '    trace("No flows installed.\\n");',
+            '       trace("No flows installed.\\n");',
             '   }',
             '}'
         ]
@@ -1576,25 +1582,26 @@ module.exports = function(RED) {
         publish_stdout(`Creating build environment for platform ${options.platform}.\n`)
 
         // Define local dir as working_directory based on options.id
-        const make_dir = path.join(RED.settings.userDir, "mcu-plugin-cache", `${options.id}`);
+
+        let make_dir = path.join(RED.settings.userDir, "mcu-plugin-cache", `${options.id}`);
+        if (['host', 'mod'].includes(options._mode)) {
+            make_dir = path.join(make_dir, options._mode);
+        }
         
         // only preliminary for testing!!
         fs.emptyDirSync(make_dir)
 
         try {
-            if ((MCU_EXPERIMENTAL & 1) && (options.buildmode == "1")) {
-                switch (options.mod_mode) {
-                    case "host":
-                        make_host_environment(nodes, make_dir, options);
-                        break;
-                    case "mod":
-                        make_build_environment(nodes, make_dir, options);
-                        break;
-                    default:
-                        throw "For ModSupport, mod_mode = 'host' | 'mod' shall be defined."
-                }
-            } else {
-                make_build_environment(nodes, make_dir, options);
+            switch (options._mode) {
+                case "host":
+                    publish_stdout(`Creating build environment for a host to run mods.\n`)
+                    make_host_environment(nodes, make_dir, options);
+                    break;
+                case "mod":
+                    publish_stdout(`Creating build environment for a mod.\n`)
+                    // work done by make_build_environment
+                default:
+                    make_build_environment(nodes, make_dir, options);
             }
         } catch (err) {
             publish_stderr(err.toString() + "\n");
@@ -1686,12 +1693,7 @@ module.exports = function(RED) {
                 throw(`Invalid platform identifier given: ${pid}`);
         }
 
-        let cmd = "mcconfig"
-        if ((MCU_EXPERIMENTAL & 1) && (options.buildmode == "1")) {
-            if (options.mod_mode == "mod") {
-                cmd = "mcrun";
-            }
-        }
+        let cmd = options._mode == "mod" ? "mcrun" : "mcconfig"
 
         if (options.debug === true) {
             cmd += " -d";
@@ -1718,9 +1720,8 @@ module.exports = function(RED) {
             cmd += " -r " + options.rotation;
         }
 
-        if ((MCU_EXPERIMENTAL && 1) && (options.buildmode == "1") && (options.mod_mode == "mod")) {
-            // no -t option for Mods
-        } else {
+        if (cmd !== "mcrun") {
+            // no -t option for mcrun
             if (options.buildtarget) {
                 cmd += " -t " + options.buildtarget;
             }    
@@ -1952,26 +1953,27 @@ module.exports = function(RED) {
                 }
 
                 let mode = req.body.mode;
+
+                // final guard for build
+                if (!(MCU_EXPERIMENTAL & 1)) {
+                    if (["host", "mod"].includes(mode)) {
+                        throw "You need to define 'process.env.MCU_EXPERIMENTAL = 1' to enable Mod Support.";
+                    }
+                }
+
+                options._mode = mode ?? "";
+
                 if (mode === "reconnect") {
                     options.buildtarget = "xsbug";
                 }
 
                 let nodes = consolidate_mcu_nodes(options.ui);
 
-                if (mode == "host") {
-                    options.mod_mode = "host"
-                }
-
-                if (mode == "mod") {
-                    options.mod_mode = "mod"
-                }
-
                 // *** Is this a valid assumption?
                 if (!options.make) {
                     options.make = true;
                 }
                 // ***
-
 
                 // abort the currently running runner
                 if (runner_promise && runner_abort) {
