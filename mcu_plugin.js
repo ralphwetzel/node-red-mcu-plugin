@@ -704,8 +704,26 @@ module.exports = function(RED) {
         .then( (p) => {
             let ports = [];
             for (let i=0; i<p.length; i+=1) {
+
+                // Only process true hardware devices, reporting vendorId & productId.
+                // This might become an issue at some point in time ... to be addressed then!
+                if (!p[i].vendorId && !p[i].productId) {
+                    continue;
+                }
+
                 if (p[i].path && p[i].path.length > 0) {
-                    ports.push(p[i].path);
+
+                    let pth = p[i].path;
+                    if ("darwin" === os.platform()) {
+                        // SerialPort (usually / only) reports the "/dev/tty." devices.
+                        // On MacOs, we yet need the  "/dev/cu."s to launch successfully!
+                        if (-1 < pth.indexOf("/dev/tty.")) {
+                            pth = pth.replace("/dev/tty.", "/dev/cu.")
+                        } else {
+                            continue;
+                        }
+                    }
+                    ports.push(pth);
                 }
             }
             ports.sort();
@@ -1759,6 +1777,10 @@ module.exports = function(RED) {
                 // bcmds = [cmd];
                 break;
             case "esp32":
+
+                env['UPLOAD_PORT'] = options.port;
+                publish_stdout(`UPLOAD_PORT = ${env['UPLOAD_PORT']}\n`);
+
                 if (os.platform() === "win32") {
                     // execFile doesn't expand the env variables... ??
                     bcmds = [
