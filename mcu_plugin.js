@@ -1137,7 +1137,7 @@ module.exports = function(RED) {
                 break;
             default:
                 manifest.include_manifest("$(MCUROOT)/manifest_runtime.json");
-        }
+        
         }
 
 
