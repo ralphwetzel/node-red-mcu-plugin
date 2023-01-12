@@ -1131,9 +1131,13 @@ module.exports = function(RED) {
         let rmp = path.resolve(__dirname, root_manifest_path);
         manifest.add_build("MCUROOT", rmp);
 
-        if (options._mode !== "mod") {
-            // don't for Mods
-            manifest.include_manifest("$(MCUROOT)/manifest_runtime.json")
+        switch (options._mode) {
+            case "mod":
+                manifest.include_manifest("$(MODDABLE)/examples/manifest_mod.json");
+                break;
+            default:
+                manifest.include_manifest("$(MCUROOT)/manifest_runtime.json");
+        }
         }
 
 
@@ -1384,9 +1388,11 @@ module.exports = function(RED) {
             }
         }
 
-        // enable editor message transmossion by the MCU
-        let editor_transmission_on = { "noderedmcu": { "editor": true }};
-        manifest.add(editor_transmission_on, "config");
+        if (options._mode !== "mod") {
+            // enable editor message transmossion by the MCU
+            let editor_transmission_on = { "noderedmcu": { "editor": true }};
+            manifest.add(editor_transmission_on, "config");
+        }
 
         let m = manifest.get();
 
