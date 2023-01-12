@@ -1325,7 +1325,7 @@ module.exports = function(RED) {
             // ui_base was already added.
             // Thus we remove it here again if present - as not necessary!
             let i = nodes.findIndex( (n) => { 
-                "ui_base" == n.type; 
+                return "ui_base" == n.type; 
             })
             if (-1 < i) {
                 nodes.splice(i, 1);
