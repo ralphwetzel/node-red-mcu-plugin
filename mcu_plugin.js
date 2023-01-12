@@ -1607,10 +1607,7 @@ module.exports = function(RED) {
 
         // Define local dir as working_directory based on options.id
 
-        let make_dir = path.join(RED.settings.userDir, "mcu-plugin-cache", `${options.id}`);
-        if (['host', 'mod'].includes(options._mode)) {
-            make_dir = path.join(make_dir, options._mode);
-        }
+        let make_dir = path.join(RED.settings.userDir, "mcu-plugin-cache", `${options.id}${(['host', 'mod'].includes(options._mode)) ? ('-' + options._mode) : ""}`);
         
         // only preliminary for testing!!
         fs.emptyDirSync(make_dir)
