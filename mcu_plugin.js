@@ -1781,6 +1781,11 @@ module.exports = function(RED) {
                 break;
             case "esp32":
 
+                // mcrun looks for the UPLOAD_PORT with support of a python script.
+                // "python" yet may not be on the path thus the call has a potential to throw.
+                // => Ensure to set the UPLOAD_PORT to circumnavigate this python script...
+                // ... otherwise we needed to source export.sh or take another action to ensure "python" can be found!
+
                 env['UPLOAD_PORT'] = options.port;
                 publish_stdout(`UPLOAD_PORT = ${env['UPLOAD_PORT']}\n`);
 
@@ -1801,7 +1806,10 @@ module.exports = function(RED) {
                         '   eval "$@"',
                         '}',
                         // 'echo "$PATH"',
-                        'runthis "source "$IDF_PATH/export.sh""',
+
+                        // See remark above cencerning UPLOAD_PORT!
+                        // 'runthis "source "$IDF_PATH/export.sh""',
+
                         // 'echo "$PATH"',
                         'echo ">> IDF_PYTHON_ENV_PATH: $IDF_PYTHON_ENV_PATH"',
                         `runthis "${cmd}"`
