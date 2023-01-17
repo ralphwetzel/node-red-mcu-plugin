@@ -389,6 +389,7 @@ module.exports = function(RED) {
     function patched_createNode(flow,config) {
 
         let orig_type = config.type;
+        let give_proxy = false;
 
         if (config._mcu?.mcu === true) {
             if (config.type) {
@@ -396,6 +397,7 @@ module.exports = function(RED) {
                 if (t) {
                     // replacing original node w/ _mcu:... node
                     config.type = t;
+                    give_proxy = true;
 
                 } else {
                     // if no replacement node defined: Save the original type in config.void...
@@ -410,7 +412,7 @@ module.exports = function(RED) {
         let node = orig_createNode(flow, config);
 
         // give mcu replacement nodes access to the proxy
-        if (config.type !== orig_type) {
+        if (give_proxy) {
             node.__getProxy = getProxy;
         }
 
@@ -785,11 +787,11 @@ module.exports = function(RED) {
 
                 // ToDo: We have to find an alternative logic for this!!
                 let running_node = RED.nodes.getNode(n.id);
-                running_node?.emit("build4mcu", n, /*manifest*/);
-
-                // add node to flows.json
+                running_node?.emit("build4mcu", n, nodes);
                 nodes.push(n);
+
             }
+            
         });
 
         /***** 
@@ -933,7 +935,7 @@ module.exports = function(RED) {
             }
         });
 
-        // Remove Link Out/In nodes
+        // Remove Link Out/In nodes & Junctions
         nodes = nodes.filter(function(node) {
             switch (node.type) {
                 case "link out":
@@ -954,6 +956,9 @@ module.exports = function(RED) {
                     }
 
                     // If not: eliminate!
+                    return false;
+
+                case "junction":
                     return false;
 
                 default:
