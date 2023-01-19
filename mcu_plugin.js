@@ -1237,7 +1237,8 @@ module.exports = function(RED) {
 
         nodes.forEach(function (n) {
 
-            if (n.type == "tab" && n._mcu?.manifest?.trim?.().length > 0) {
+            // check _mcu for any manifest information defind
+            if (n._mcu?.manifest?.trim?.().length > 0) {
                 // Write the flow's manifest.json
                 fs.writeFileSync(path.join(dest, `manifest_${n.id}.json`), n._mcu.manifest.trim(), (err) => {
                     if (err) {
@@ -1245,6 +1246,22 @@ module.exports = function(RED) {
                     }
                 });
                 manifest.include_manifest(`./manifest_${n.id}.json`)
+            }
+
+            if (n._mcu.include && Array.isArray(n._mcu.include)) {
+                n._mcu.include.forEach(function(m) {
+                    manifest.include_manifest(m);
+                });
+            }
+
+            if (n._mcu.modules) {
+                try {
+                    n._mcu.modules.keys().forEach(function(k) {
+                        manifest.add_module(n._mcu.modules[k], k);
+                    })
+                } catch(err) {
+                    throw err;
+                }
             }
 
             // clean the config from the _mcu flag
