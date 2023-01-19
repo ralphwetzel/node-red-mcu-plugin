@@ -1248,13 +1248,13 @@ module.exports = function(RED) {
                 manifest.include_manifest(`./manifest_${n.id}.json`)
             }
 
-            if (n._mcu.include && Array.isArray(n._mcu.include)) {
+            if (n._mcu?.include && Array.isArray(n._mcu.include)) {
                 n._mcu.include.forEach(function(m) {
                     manifest.include_manifest(m);
                 });
             }
 
-            if (n._mcu.modules) {
+            if (n._mcu?.modules) {
                 try {
                     n._mcu.modules.keys().forEach(function(k) {
                         manifest.add_module(n._mcu.modules[k], k);
