@@ -787,7 +787,8 @@ module.exports = function(RED) {
 
                 // ToDo: We have to find an alternative logic for this!!
                 let running_node = RED.nodes.getNode(n.id);
-                running_node?.emit("build4mcu", n, nodes);
+                running_node?.emit("mcu:plugin:build:prepare", n, nodes);
+
                 nodes.push(n);
 
             }
