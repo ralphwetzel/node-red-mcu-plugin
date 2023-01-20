@@ -1905,6 +1905,8 @@ module.exports = function(RED) {
             case "linux":
                 // runner_options["shell"] = "/bin/bash";
 
+                env["DISPLAY"] = ":0.0";
+                
             case "darwin":
 
                 publish_stdout("Creating build script file...\n")
