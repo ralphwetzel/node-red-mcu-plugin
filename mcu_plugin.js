@@ -1488,7 +1488,7 @@ module.exports = function(RED) {
 
         manifest.add_module("./main");
 
-        // enable editor message transmossion by the MCU
+        // enable editor message transmission by the MCU
         let editor_transmission_on = { "noderedmcu": { "editor": true }};
         manifest.add(editor_transmission_on, "config");
 
