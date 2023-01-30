@@ -1502,7 +1502,7 @@ module.exports = function(RED) {
             "FinalizationRegistry",
             "Function",
             "Generator",
-            "RegExp",
+            // "RegExp",
             "WeakMap",
             "WeakRef",
             "WeakSet"
