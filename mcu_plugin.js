@@ -18,6 +18,8 @@ const mcuProxy = require("./lib/proxy.js");
 const mcuNodeLibrary = require("./lib/library.js");
 const mcuManifest = require("./lib/manifest.js");
 
+const mcuMessageRelay = require("./lib/relay.js")
+
 // ***** AbortController
 // node@14: Established w/ 14.17; polyfill to be sure
 // node@16+: Fully integrated
@@ -376,6 +378,11 @@ module.exports = function(RED) {
 
     // End "Calculate ..."
     // *****
+
+
+    // ****
+    // Instance to forward messages from the MCU into runtime
+    let mcuRelay = new mcuMessageRelay.relay(RED);
 
 
     // *****
@@ -2049,122 +2056,25 @@ module.exports = function(RED) {
 
                 proxy = new mcuProxy.proxy(proxy_port_mcu, proxy_port_xsbug);
 
-                proxy.on("status", (id, data) => {
+                proxy.on("status", (id, data) => 
+                    mcuRelay.status(id, data)
+                )
 
-                    /* {
-                        text: 1658087621772,
-                        source: { id: '799b7e8fcf64e1fa', type: 'debug', name: 'debug 4' }
-                    } */
-        
-                    let status = {};
-        
-                    let fill = data.fill;
-                    let shape = data.shape;
-                    let text = data.text;
-        
-                    if (fill) { status["fill"] = fill;}
-                    if (shape) { status["shape"] = shape;}
-                    if (text) { status["text"] = text;}
-        
-                    if (id) {
-                        RED.events.emit("node-status",{
-                            "id": id,
-                            "status": status
-                        });    
-                    }
-        
-                })
+                proxy.on("input", (id, data) => 
+                    mcuRelay.input(id, data)
+                )
 
-                proxy.on("input", (id, data) => {
-                    if (id) {
-                        let node = RED.nodes.getNode(id);
-                        if (node) {
-                            node.receive(data);
-                        }
-                    }
-                })
+                proxy.on("error", (id, data) => 
+                    mcuRelay.error(id, data)
+                )
 
-                proxy.on("error", (id, data) => {
-                    if (id) {
-                        let node = RED.nodes.getNode(id);
-                        if (node) {
-                            node.error(data.error);
-                        }
-                    }
-                })
+                proxy.on("warn", (id, data) => 
+                    mcuRelay.warn(id, data)
+                )
 
-                proxy.on("warn", (id, data) => {
-                    if (id) {
-                        let node = RED.nodes.getNode(id);
-                        if (node) {
-                            node.warn(data.warn);
-                        }
-                    }
-                })
-
-                proxy.on("mcu", (data) => {
-
-                    let token = "state";
-
-                    if (token in data === false)
-                        return;
-                    
-                    let s = data[token];
-                    let msg;
-                    let options;
-
-                    switch (s) {
-                        case "login":
-
-                            let from = data.from
-                            if (from.length > 0) {
-                                if (from === "main") {
-                                    msg = "MCU is initializing...";
-                                } else if (from.length > 6) {
-                                    let c = from.substring(0, 6);
-                                    let c_id = from.substring(6);
-                                    if (c === "config" && c_id == options.id) {
-                                        msg = "Simulator is initializing...";
-                                    }
-                                }
-                            }
-
-                            options = { type: "warning", timeout: 5000 };
-                            break;
-                        
-                        case "building":
-
-                        // building & ready fire almost simultaneously
-
-                        //     msg = "MCU building flows...";
-                        //     options = { type: "warning", timeout: 1000 };
-                        //     break;
-
-                        // case "ready":
-                            msg = "Flows are ready.";
-                            options = { timeout: 5000 };
-                            break;
-
-                        case "mod_waiting":
-                            if (MCU_EXPERIMENTAL & 1) {
-                                msg = "Host is ready. Waiting for flows to be installed.";
-                                options = { timeout: 5000 };
-                                break;    
-                            }
-
-                        default:
-                            return;
-
-                    }
-
-                    if (msg && msg.length > 0) {
-                        RED.comms.publish("mcu/notify",  {
-                            "message": msg, 
-                            "options": options
-                        });    
-                    }
-
-                })
+                proxy.on("mcu", (data) => 
+                    mcuRelay.mcu(data)
+                )
 
                 try {
                     runner_promise = build_flows(nodes, options, RED.comms.publish)
@@ -2182,7 +2092,6 @@ module.exports = function(RED) {
                 }
 
             });
-
 
             RED.httpAdmin.get(`${apiRoot}/config`, routeAuthHandler, (req, res) => {
                 let c = {
@@ -2212,8 +2121,6 @@ module.exports = function(RED) {
                 persist_cache(config);
                 res.status(200).end();    
             })
-                      
         }
     });
-    
 }
