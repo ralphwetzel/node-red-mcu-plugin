@@ -12,6 +12,8 @@ const os = require("os");
 const path = require("path");
 const {SerialPort} = require("serialport");
 
+const Eta = require("eta");
+
 const app_name = "node-red-mcu-plugin";
 
 const mcuProxy = require("./lib/proxy.js");
@@ -1467,27 +1469,22 @@ module.exports = function(RED) {
         manifest.include_manifest("$(MCUROOT)/manifest_host.json")
 
         // Create main.js
+        let mainjs = fs.readFileSync(path.join(__dirname, "./templates/main_mod_host_ui_js.eta"), 'utf-8');
 
-        let mainjs = [
-            'import "nodered";	// import for global side effects',
-            'import Modules from "modules";',
-            'import config from "mc/config";',
-            '',
-            'if (Modules.has("flows")) {',
-            '    const flows = Modules.importNow("flows");',
-            '    RED.build(flows);',
-            '}',
-            'else {',
-            '   if (config.noderedmcu?.editor) {',
-			`       trace.left('{"state": "mod_waiting"}', "NR_EDITOR");`,
-            '   } else {',
-            '       trace("No flows installed.\\n");',
-            '   }',
-            '}'
-        ]
+        mainjs = Eta.render(mainjs,
+        {
+            cll: options.cll ?? 4096,
+            dll: options.dll ?? 4096,
+            tc: options.tc ?? 1,
+            pixels: options.px * options.py ?? (240*32)
+        })        
+
+        if (options.ui) {        
+            manifest.include_manifest("$(MCUROOT)/manifest_ui.json")
+        }
 
         // Write the main.js file
-        fs.writeFileSync(path.join(dest, "main.js"), mainjs.join("\r\n"), (err) => {
+        fs.writeFileSync(path.join(dest, "main.js"), mainjs, (err) => {
             if (err) {
                 throw err;
             }
