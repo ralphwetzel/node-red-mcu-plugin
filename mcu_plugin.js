@@ -593,6 +593,7 @@ module.exports = function(RED) {
             'esp32/saola_wrover',
             'esp32/wemos_oled_lolin32',
             'esp32/wrover_kit',
+            'esp32/wt32_eth01',
             'gecko/blue',
             'gecko/giant',
             'gecko/mighty',
