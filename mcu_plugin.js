@@ -1339,12 +1339,14 @@ module.exports = function(RED) {
         let app_options;
         if (options.ui && nodes_demanding_ui_support > 1) {
 
-            // Dedicated includes
-            manifest.include_manifest("$(MCUROOT)/nodes/ui/manifest.json");
+            if ("mod" !== options._mode) {
+                // Dedicated includes
+                manifest.include_manifest("$(MCUROOT)/nodes/ui/manifest.json");
 
-            // @ToDo: Check if really necessary!
-            manifest.include_manifest("$(MCUROOT)/nodes/random/manifest.json");
-            manifest.include_manifest("$(MCUROOT)/nodes/trigger/manifest.json");
+                // @ToDo: Check if really necessary!
+                manifest.include_manifest("$(MCUROOT)/nodes/random/manifest.json");
+                manifest.include_manifest("$(MCUROOT)/nodes/trigger/manifest.json");
+            }
 
             app_options = {
                 commandListLength: options.cll,
