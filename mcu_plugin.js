@@ -1840,15 +1840,19 @@ module.exports = function(RED) {
                         '   echo ">> $@"',
                         '   eval "$@"',
                         '}',
-                        // 'echo "$PATH"',
+                    ]
 
-                        // See remark above cencerning UPLOAD_PORT!
-                        // 'runthis "source "$IDF_PATH/export.sh""',
+                    // See remark above cencerning UPLOAD_PORT!
+                    if (options._mode !== "mod") {
+                        bcmds.push(
+                            'runthis "source "$IDF_PATH/export.sh""',
+                        )
+                    }
 
-                        // 'echo "$PATH"',
+                    bcmds.push(...[
                         'echo ">> IDF_PYTHON_ENV_PATH: $IDF_PYTHON_ENV_PATH"',
                         `runthis "${cmd}"`
-                    ]
+                    ])
                 }
                 break;
             case "pico":
