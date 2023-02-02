@@ -1516,6 +1516,11 @@ module.exports = function(RED) {
         ]
         manifest.add(strips, "strip");
 
+        if (options?.creation) {
+            let c = JSON.parse(options.creation)
+            manifest.add(c, "creation");
+        }
+
         let m = manifest.get();
 
         // Write the (root) manifest.json
