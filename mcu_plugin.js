@@ -2130,6 +2130,105 @@ module.exports = function(RED) {
                 persist_cache(config);
                 res.status(200).end();    
             })
+            RED.httpAdmin.post(`${apiRoot}/backproxy`, routeAuthHandler, (req, res) => {
+                let msg;
+
+                if (req.body && req.body.msg) {
+                    msg = req.body.msg
+                }
+
+                console.log(msg.type);
+                
+                if (msg && mcuRelay[msg.type]) {
+                    mcuRelay[msg.type](msg.id, msg.data);
+                }
+
+                res.status(200).end();
+
+            })
+
+            RED.httpAdmin.post(`${apiRoot}/localflash`, routeAuthHandler, (req, res) => {
+                let options;
+                if (req.body && req.body.options) {
+                    options = req.body.options
+                } else {
+                    RED.log.error(`${app_name}: Failed to parse incoming config data.`);
+                    res.status(400).end();
+                    return;
+                }
+
+                let mode = req.body.mode;
+
+                options._mode = mode ?? "";
+
+                options.buildtarget = "build";
+
+                let nodes = consolidate_mcu_nodes(options.ui);
+
+                options.make = true;
+
+                // abort the currently running runner
+                if (runner_promise && runner_abort) {
+                    // console.log("Aborting...")
+                    runner_abort.abort();
+                    delete runner_promise;
+                    delete runner_abort;
+                }
+
+                try {
+                    runner_promise = build_flows(nodes, options, RED.comms.publish)
+                    .then( () => {
+
+                        let version = "debug";
+                        if (options.release === true) {
+                            version = "relese";
+                        }
+                        
+                        let pp = path.join(MODDABLE, "build", "bin", options.platform, version, options.id);
+                        if (!fs.existsSync(pp)) {
+                            RED.comms.publish("mcu/stdout/test", "bin data directory not found.", false);
+                        }
+        
+                        let files = {
+                            "bl": "bootloader.bin",
+                            "pt": "partition-table.bin",
+                            "xs": "xs_esp32.bin"
+                        }
+        
+                        let not_found = false;
+                        for (f in files) {
+                            let file = files[f];
+                            let fp = path.join(pp, file);
+        
+                            if (!fs.pathExistsSync(fp)) {
+                                not_found = true;
+                                files[f] = undefined;
+                                continue;
+                            }
+        
+                            let fb = fs.readFileSync(fp);
+                            // files[f] = fb.toJSON();
+                            files[f] = fb.toString("binary");
+                        }
+        
+                        if (not_found) {
+                            res.status(500).end();    
+                        }
+        
+                        res.status(200).end(JSON.stringify(files), "utf8");    
+                    })
+                    .catch((err) => {
+                        // RED.comms.publish("mcu/stdout/test", err.toString(), false);
+                        res.status(400).end();
+                    })
+                }
+                catch (err) {
+                    RED.comms.publish("mcu/stdout/test", err.toString(), false);
+                    res.status(400).end();
+                }
+
+            })
+
         }
     });
 }

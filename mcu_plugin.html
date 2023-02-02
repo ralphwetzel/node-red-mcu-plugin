@@ -98,9 +98,30 @@
 </style>
 
 <script type="text/javascript" src="resources/@ralphwetzel/node-red-mcu-plugin/lib/flashTab.js"></script>
+<script type="module">
+    import {ESPLoader, Transport} from "./resources/@ralphwetzel/node-red-mcu-plugin/lib/espressif.js";
+
+    globalThis._mcu = {};
+    globalThis._mcu.ESPLoader = ESPLoader;
+    globalThis._mcu.Transport = Transport;
+
+</script>
+
+<script type="text/javascript">
+
+    let script = document.createElement('script');
+    script.onload = function () {
+        let script = document.createElement('script');
+        script.src = "resources/@ralphwetzel/node-red-mcu-plugin/lib/xsserial.js";
+        document.head.appendChild(script);
+    };
+    script.src = "resources/@ralphwetzel/node-red-mcu-plugin/lib/xsbug.js";
+    document.head.appendChild(script);
+
+</script>
+
 <script type="text/javascript">
 (function() {
-
     
     var sidebarContent;
     var treeList;
@@ -509,44 +530,54 @@
         // this ensures that a line feed is inserted afterwards - if necessary!
         let waiting_dot = 0;
 
-        RED.comms.subscribe("mcu/stdout/#", function (topic, msg) {
+        let mcu_console = {
+            log(msg) {
+                let mcuc = $("#mcu_console");
 
-            let mcuc = $("#mcu_console");
+                // If the textarea is initially scrolled to its bottom position...
+                let at_the_bottom = (mcuc[0].scrollHeight - mcuc.scrollTop() - mcuc[0].clientHeight < 8);
 
-            // If the textarea is initially scrolled to its bottom position...
-            var at_the_bottom = (mcuc[0].scrollHeight - mcuc.scrollTop() - mcuc[0].clientHeight < 8);
+                if (msg.length > 0) {
 
-            if (msg.length > 0) {
-
-                if (msg == "__flash_console") {
-                    flashTab("__console__")
-                } else {
-                    let text = mcuc.val()
-                    
-                    if ("." === msg) {
-                        waiting_dot += 1;
-                    } else if (waiting_dot > 1 && msg[0] !== "." && msg.charCodeAt(0) !== 10){
-                        text += '\n';
-                        waiting_dot = 0;
+                    if (msg == "__flash_console") {
+                        flashTab("__console__")
                     } else {
-                        waiting_dot = 0;
-                    }
+                        let text = mcuc.val()
 
-                    text += msg;
-                    mcuc.val(text);
-                    if (at_the_bottom) {
-                        // ... we scroll it there afterwards again.
-                        mcuc.scrollTop(mcuc[0].scrollHeight);
-                    }
+                        // console.log(msg, msg.length, msg.charCodeAt(0));
 
-                    res = progress_re.exec(msg);
-                    if (res && res.length>1) {
-                        progress_bar.set(res[1]);
-                    } else {
-                        progress_bar.ping();
+                        if ("." === msg) {
+                            waiting_dot += 1;
+                        } else if (waiting_dot > 1 && msg[0] !== "." && msg.charCodeAt(0) !== 10) {
+                            text += '\n';
+                            waiting_dot = 0;
+                        } else if ("\r\n" === msg || "\n\r" === msg) {
+                            msg = "\n";
+                        } else {
+                            waiting_dot = 0;
+                        }
+
+                        text += msg;
+                        mcuc.val(text);
+                        if (at_the_bottom) {
+                            // ... we scroll it there afterwards again.
+                            mcuc.scrollTop(mcuc[0].scrollHeight);
+                        }
+
+                        res = progress_re.exec(msg);
+                        if (res && res.length > 1) {
+                            progress_bar.set(res[1]);
+                        } else {
+                            progress_bar.ping();
+                        }
                     }
                 }
+
             }
+        }
+
+        RED.comms.subscribe("mcu/stdout/#", function (topic, msg) {
+            mcu_console.log(msg);
         });
 
 
@@ -1224,6 +1255,18 @@
                             })
                         }
                     }
+                    if (MCU_EXPERIMENTAL & 2) {
+                        if (data.buildmode !== "1") {
+                            options.push( {
+                                label: $(`<span>Build then flash local...</span>`),
+                                // disabled: RED.nodes.dirty(),
+                                onselect: function () {
+                                    launch_build("flash_local");
+                                }
+                            });
+                        }
+                    }
+
                     let menu = RED.popover.menu({
                         options: options,
                     });
@@ -1309,6 +1352,13 @@
                         }, 5000);
 
                         progress_bar.reset();
+
+                        if (mode == "flash_local") {
+                            return flash_local(options);
+                        } else if (mode == "remote") {
+                            options._remote = true;
+                            return flash_local(options);
+                        }
 
                         $.ajax({
                             url: "mcu/build",
@@ -1880,6 +1930,225 @@
             debounce(function () {
                 run_persist(c);
             }, 500)();
+        }
+
+        // id: <string> Identifier for the build process
+        // platform: <string> e.g. esp32/m5atom_lite
+        // version: <string> debug or release
+
+        let xsb;
+        function flash_local(options) {
+
+
+            /* /Users/ralph/.espressif/python_env/idf4.4_py3.10_env/bin/python ../../../../../../../../../../.local/share/esp32/esp-idf/components/esptool_py/esptool/esptool.py 
+                -p (PORT) 
+                -b 460800 
+                --before default_reset 
+                --after hard_reset 
+                --chip esp32  
+                write_flash 
+                --flash_mode dio 
+                --flash_size detect 
+                --flash_freq 80m 
+                0x1000 build/bootloader/bootloader.bin 
+                0x8000 build/partition_table/partition-table.bin 
+                0x10000 build/xs_esp32.bin
+            */
+
+            // get files from runtime (or another server?!)
+            // put files into buffer
+            // invoke espressif-js to flash
+
+            let serial_device;
+            let esploader;
+            let transport;
+            let upload;
+            
+            if (xsb) {
+                xsb.closeDevice();
+            }
+
+            navigator.serial.requestPort({})
+            .then((device) => {
+
+                serial_device = device;
+                let builder;
+
+                return new Promise((resolve, reject) => {
+                    $.post({
+                        url: options._remote ? "mcu/remotebuild" : "mcu/localflash",
+                        contentType: "application/json",
+                        data: JSON.stringify({
+                            "options": options
+                        }),
+                        success: function (response) {
+                            resolve(response);
+                        },
+                        error: function (error) {
+                            reject(error);
+                        }
+                    });
+                }).then((data) => {
+
+                    let files = JSON.parse(data);
+
+                    upload = [
+                        {
+                            address: 0x1000,
+                            data: files.bl
+                        },
+                        {
+                            address: 0x8000,
+                            data: files.pt
+                        },
+                        {
+                            address: 0x10000,
+                            data: files.xs
+                        }
+                    ]
+
+                    let espLoaderTerminal = {
+                        clean() {
+                            // term.clear();
+                        },
+                        writeLine(data) {
+                            // term.writeln(data);
+                            mcu_console.log(data + "\n");
+                        },
+                        write(data) {
+                            mcu_console.log(data);
+                            // term.write(data)
+                        }
+                    }
+
+                    transport = new _mcu.Transport(serial_device);
+                    esploader = new _mcu.ESPLoader(transport, /*baudrates.value*/ 1500000, espLoaderTerminal);
+
+                    return esploader.main_fn()
+                }).then((chip) => {
+                    // console.log(chip)
+                    return esploader.write_flash(
+                        upload,
+                        'keep',
+                        undefined,
+                        undefined,
+                        false,
+                        true,
+                        (fileIndex, written, total) => {
+                            // progressBars[fileIndex].value = (written / total) * 100;
+                            // console.log(fileIndex, (written / total) * 100);
+                        },
+                        // (image) => CryptoJS.MD5(CryptoJS.enc.Latin1.parse(image)),
+                    )
+                        .catch((e) => {
+                            return Promise.reject(e);
+                        })
+                }).then(() => {
+                    mcu_console.log("Hard reset.\n");
+                    return esploader.hard_reset()
+                }).then(() => {
+                    mcu_console.log("Disconnecting.\n");
+                    return transport.disconnect()
+                        .then(() => {
+                            mcu_console.log("Done.\n");
+                        })
+                }).catch((err) => {
+                    mcu_console.log(err.toString());
+                    return Promise.resolve();
+                }).then(() => {
+
+                    let transport = undefined;
+                    let esploader = undefined;
+
+                    xsb = new XsbugSerial({ baudRate: 1500000 });
+
+                    xsb.onLogin = function () {
+                        this.onBreak = this.doGo;
+                        this.doSetAllBreakpoints([{ path: "exceptions", line: 0 }]);
+
+                        // we fake the initializing standard signal here...
+                        this.onBubble({
+                            "bubble": {
+                                "node": "NR_EDITOR",
+                                "data": JSON.stringify({
+                                    "state": "login",
+                                    "from": "main"
+                                })
+                            }
+                        })
+
+                    }
+                    xsb.onLog = function (data) {
+                        mcu_console.log(`${JSON.stringify(data)}\n`);
+                    }
+
+                    xsb.onBubble = function (data) {
+
+                        // Example for incoming data:
+                        // {
+                        //     "node": "b71d2dfed41f7081",
+                        //     "data": "{\"status\":{\"fill\":\"grey\",\"shape\":\"dot\",\"text\":\"Upload Example: 1 / 1\"}}"
+                        // }
+
+                        let bubble = data.bubble;
+                        if (bubble) {
+
+                            let id = bubble.node;
+
+                            if (id && bubble.data) {
+
+                                let event;
+                                try {
+                                    event = JSON.parse(bubble.data);
+                                } catch { }
+
+                                if (event) {
+
+                                    let _type;
+                                    let _data;
+
+                                    if (event.status) {
+                                        _type = "status";
+                                        _data = event.status;
+
+                                    } else if (event.input) {
+                                        _type = "input";
+                                        _data = event.input;
+
+                                    } else if (event.state) {
+
+                                        _type = "mcu";
+                                        _data = {...event};
+                                        id = undefined;
+
+                                    }
+
+                                    if (_type) {
+
+                                        // We send the received event data back to the server
+                                        // to inject it "regularly" into the runtime & the clients.
+
+                                        $.post({
+                                            url: "mcu/backproxy",
+                                            contentType: "application/json",
+                                            data: JSON.stringify({
+                                                "msg": {
+                                                    "type": _type,
+                                                    "id": id,
+                                                    "data": _data
+                                                }
+                                            })
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    return xsb.connect(serial_device);
+
+                })
+            });
         }
     }
 })();
