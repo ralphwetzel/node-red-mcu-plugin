@@ -292,6 +292,7 @@
         buildmode: "0",     // EXPERIMENTAL
         buildtarget: "all",
         debug: true,
+        debugtarget: "0",
         release: false,
         arguments: "{}",
         creation: "{}",
@@ -1512,6 +1513,7 @@
 
                 $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
 
+                let rowDT;
                 $('<div class="mcu-build-option-label">').text("Instrumentation:").appendTo(row4);
                 let instrumentation = $('<input>').appendTo(row4)
                 instrumentation.typedInput({
@@ -1543,9 +1545,37 @@
                         }
 
                     }
+
+                    if (rowDT) {
+                        data.debug === true ? rowDT.show(500) : rowDT.hide(500);
+                    }
+
                 })
                 instrumentation.next().css({ "width": "auto" });
                 $("<span/>").text("Select none of this for a release build!").css({ "margin-left": "20px", "font-size": "x-small" }).appendTo(row4);
+
+                rowDT = $('<div>').appendTo(row4).hide();
+
+                $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(rowDT);
+
+                $('<div class="mcu-build-option-label">').text("Debug Target:").appendTo(rowDT);
+                let debugtarget = $('<input>').appendTo(rowDT)
+                debugtarget.typedInput({
+                    type: "debugtarget",
+                    types: [{
+                        value: "debugtarget",
+                        options: [
+                            { value: "0", label: "xsbug" },
+                            { value: "1", label: "console" },
+                        ],
+                    }],
+                }).on('change', function (event, type, value) {
+                    if (initializing === false) {
+                        data.debugtarget = value;
+                        persist_config();
+                    }
+                })
+                debugtarget.next().css({ "width": "auto" });
 
                 $('<div>', { style: "width: 100%; height: 4px;" }).appendTo(row4);
 
@@ -1788,6 +1818,7 @@
                     }
                     instrumentation.typedInput("value", _instr.join(','));
                 }
+                debugtarget.typedInput("value", data.debugtarget);
                 arguments.typedInput("value", data.arguments);
                 creation.typedInput("value", data.creation);
 

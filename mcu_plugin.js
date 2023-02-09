@@ -1762,6 +1762,10 @@ module.exports = function(RED) {
         if (options.debug === true) {
             cmd += " -d";
             cmd += ` -x localhost:${proxy_port_mcu}`
+
+            if (options.debugtarget == "1") {
+                cmd += " -l"
+            }
         }
 
         if (options.pixel) {
