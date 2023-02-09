@@ -1103,6 +1103,7 @@
                             icon: "fa fa-at",
                             value: "platform",
                             options: mcu_plugin_config.platforms.filter(p => {
+                                if (p.value == value) return true;
                                 return (p.value.slice(0, value.length + 1) == value + "/")
                             }),
                         }]);
@@ -1765,7 +1766,9 @@
                 pixelsY.next().css({ "width": "100px" });
 
                 // Now initialize the form
-                let _target = data.platform.slice(0, data.platform.indexOf("/"));
+                let _target = data.platform.indexOf("/");
+                _target = _target > 0 ? data.platform.slice(0, _target) : data.platform;
+
                 target.typedInput("value", data.platform == "" ? "sim" : _target);
                 platform.typedInput("value", data.platform);
                 plug.typedInput("value", data.port);

@@ -652,7 +652,15 @@ module.exports = function(RED) {
             platform_identifiers.splice(platform_identifiers.indexOf(platforms_verified[i]), 1);
         }
 
-        mcu_plugin_config.platforms = platforms;
+        // add generic build targets
+        mcu_plugin_config.platforms = [];
+
+        ["esp", "esp32"].forEach((p) => {
+            mcu_plugin_config.platforms.push({value: p})
+        })
+
+        mcu_plugin_config.platforms.push(...platforms);
+
     }
 
     {
