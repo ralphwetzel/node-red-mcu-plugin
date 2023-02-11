@@ -1,4 +1,5 @@
-import { File } from "file";
+// import { File } from "file";
+// Att: "file" not loaded as default on esp
 
 export function resolve() {
 
