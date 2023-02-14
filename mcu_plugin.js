@@ -1823,9 +1823,34 @@ module.exports = function(RED) {
 
         switch (pid) {
             case "sim":
-            case "esp":
-                // bcmds = [cmd];
                 break;
+
+            case "esp":
+
+                env['UPLOAD_PORT'] = options.port;
+                publish_stdout(`UPLOAD_PORT = ${env['UPLOAD_PORT']}\n`);
+
+                bcmds = [
+                    '#!/bin/bash',
+                    'runthis(){',
+                    '   echo ">> $@"',
+                    '   eval "$@"',
+                    '}',
+                ]
+
+                // See remark above cencerning UPLOAD_PORT!
+                // if (options._mode !== "mod") {
+                //     bcmds.push(
+                //         'runthis "source "$IDF_PATH/export.sh""',
+                //     )
+                // }
+
+                bcmds.push(...[
+                    `runthis "${cmd}"`
+                ])
+
+                break;
+
             case "esp32":
 
                 // mcrun looks for the UPLOAD_PORT with support of a python script.
