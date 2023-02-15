@@ -1808,7 +1808,7 @@ module.exports = function(RED) {
             }
 
             for (key in args) {
-                cmd += " " + key + '="' + args[key] + '"'
+                cmd += ` ${key}='"${args[key]}"'`
             }
         }
 
@@ -1819,34 +1819,34 @@ module.exports = function(RED) {
 
         publish_stdout(`> cd ${make_dir}\n`);
 
-        let bcmds = [cmd];  // build_commands
+        let bcmds = [
+            '#!/bin/bash',
+            'runthis(){',
+            '   echo ">> $@"',
+            '   eval "$@"',
+            '}',
+        ]
 
         switch (pid) {
-            case "sim":
-                break;
 
+            /* Not tested! */
+            case "pico":
+            case "gecko":
+            case "qca4020":
+            /* Not tested! */
+
+            case "sim":
+
+                bcmds.push(`runthis ${cmd}`);
+                break;
+                
             case "esp":
 
                 env['UPLOAD_PORT'] = options.port;
                 publish_stdout(`UPLOAD_PORT = ${env['UPLOAD_PORT']}\n`);
 
-                bcmds = [
-                    '#!/bin/bash',
-                    'runthis(){',
-                    '   echo ">> $@"',
-                    '   eval "$@"',
-                    '}',
-                ]
-
-                // See remark above cencerning UPLOAD_PORT!
-                // if (options._mode !== "mod") {
-                //     bcmds.push(
-                //         'runthis "source "$IDF_PATH/export.sh""',
-                //     )
-                // }
-
                 bcmds.push(...[
-                    `runthis "${cmd}"`
+                    `runthis ${cmd}`
                 ])
 
                 break;
@@ -1868,34 +1868,23 @@ module.exports = function(RED) {
                         'pushd %IDF_PATH%',
                         `CALL "${process.env["IDF_TOOLS_PATH"]}\\idf_cmd_init.bat"`,
                         'popd',
-                        cmd
+                        `${cmd}`
                     ]
                 } else {
-                    bcmds = [
-                        '#!/bin/bash',
-                        'runthis(){',
-                        '   echo ">> $@"',
-                        '   eval "$@"',
-                        '}',
-                    ]
 
                     // See remark above cencerning UPLOAD_PORT!
                     if (options._mode !== "mod") {
                         bcmds.push(
-                            'runthis "source "$IDF_PATH/export.sh""',
+                            'runthis "source \"$IDF_PATH/export.sh\""'
                         )
                     }
 
                     bcmds.push(...[
                         'echo ">> IDF_PYTHON_ENV_PATH: $IDF_PYTHON_ENV_PATH"',
-                        `runthis "${cmd}"`
+                        `runthis ${cmd}`
                     ])
+
                 }
-                break;
-            case "pico":
-            case "gecko":
-            case "qca4020":
-                // bcmds = [cmd];
                 break;
         }
 
