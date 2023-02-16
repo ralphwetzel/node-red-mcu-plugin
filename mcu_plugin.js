@@ -1432,7 +1432,7 @@ module.exports = function(RED) {
         }
 
         if (options._mode !== "mod") {
-            // enable editor message transmossion by the MCU
+            // enable editor message transmission by the MCU
             let editor_transmission_on = { "noderedmcu": { "editor": true }};
             manifest.add(editor_transmission_on, "config");
         }
