@@ -1586,8 +1586,10 @@ module.exports = function(RED) {
             publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable} (${"32" === x_win ? "x86" : "x64"})\n` );
         } else {
             publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable}\n` );
-            x_win = "x86";
-            publish_stdout(`Unable to determine if Windows OS is 32-bit (x86) or 64-bit (x64); forcing to (${x_win}).` );
+            if (os.platform() === "win32") {
+                x_win = "x86";
+                publish_stdout(`Unable to determine if Windows OS is 32-bit (x86) or 64-bit (x64); forcing to (${x_win}).\n` );
+            }
         }
 
         publish_stdout(`HOME directory check: ${os.homedir()}\n`);
