@@ -1560,10 +1560,14 @@ module.exports = function(RED) {
         publish_stdout("Starting build process...\n")
         publish_stdout(`Host system check: ${os.version()}\n`);
 
-        if (__VERSIONS__.x_win) {
-            publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable} (${"32" === __VERSIONS__.x_win ? "x86" : "x64"})\n` );
+        let x_win = __VERSIONS__.x_win;
+
+        if (x_win) {
+            publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable} (${"32" === x_win ? "x86" : "x64"})\n` );
         } else {
             publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable}\n` );
+            x_win = "x86";
+            publish_stdout(`Unable to detmine if Windows OS is 32-bit (x86) or 64-bit (x64); forcing to (${x_win}).` );
         }
 
         publish_stdout(`HOME directory check: ${os.homedir()}\n`);
@@ -1864,7 +1868,7 @@ module.exports = function(RED) {
                 if (os.platform() === "win32") {
                     // execFile doesn't expand the env variables... ??
                     bcmds = [
-                        `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars${__VERSIONS__.x_win}.bat"`,
+                        `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars${x_win}.bat"`,
                         'pushd %IDF_PATH%',
                         `CALL "${process.env["IDF_TOOLS_PATH"]}\\idf_cmd_init.bat"`,
                         'popd',
