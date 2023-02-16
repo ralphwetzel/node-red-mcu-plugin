@@ -270,7 +270,7 @@ module.exports = function(RED) {
     if (os.platform() === "win32") {
         let testcmd = [
             `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" > nul`,
-            `cd ${MODDABLE}\\build\\bin\\win\\debug`,
+            `cd /D ${MODDABLE}\\build\\bin\\win\\debug`,
             'dumpbin /headers xsbug.exe | findstr "machine"'
         ].join(" && ");
 
