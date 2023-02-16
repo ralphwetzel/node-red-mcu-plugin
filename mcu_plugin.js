@@ -1431,10 +1431,30 @@ module.exports = function(RED) {
             }
         }
 
-        if (options._mode !== "mod") {
-            // enable editor message transmission by the MCU
-            let editor_transmission_on = { "noderedmcu": { "editor": true }};
-            manifest.add(editor_transmission_on, "config");
+        // prevent setting config arguments via the command line!
+        {
+            let args = {};
+
+            if (options?.arguments) {
+                args = JSON.parse(options.arguments);
+            }
+
+            if (options.ssid) {
+                args['ssid'] = options.ssid;
+            }
+            if (options.password) {
+                args['password'] = options.password;
+            }
+
+            if (options._mode !== "mod") {
+                
+                // enable editor message transmission by the MCU
+                args['noderedmcu'] = {
+                    'editor': true
+                }
+            }
+
+            manifest.add(args, "config");
         }
 
         let m = manifest.get();
@@ -1799,22 +1819,22 @@ module.exports = function(RED) {
             }    
         }
 
-        {
-            let args = {};
-            if (options.arguments) {
-                args = JSON.parse(options.arguments);
-            }
-            if (options.ssid) {
-                args['ssid'] = options.ssid;
-            }
-            if (options.password) {
-                args['password'] = options.password;
-            }
+        // {
+        //     let args = {};
+        //     if (options.arguments) {
+        //         args = JSON.parse(options.arguments);
+        //     }
+        //     if (options.ssid) {
+        //         args['ssid'] = options.ssid;
+        //     }
+        //     if (options.password) {
+        //         args['password'] = options.password;
+        //     }
 
-            for (key in args) {
-                cmd += ` ${key}='"${args[key]}"'`
-            }
-        }
+        //     for (key in args) {
+        //         cmd += ` ${key}='"${args[key]}"'`
+        //     }
+        // }
 
         let runner_options = {
             "cwd": make_dir,
@@ -1872,7 +1892,8 @@ module.exports = function(RED) {
                         'pushd %IDF_PATH%',
                         `CALL "${process.env["IDF_TOOLS_PATH"]}\\idf_cmd_init.bat"`,
                         'popd',
-                        `${cmd}`
+                        `@echo ${cmd}`,
+                        `${cmd}`,
                     ]
                 } else {
 
