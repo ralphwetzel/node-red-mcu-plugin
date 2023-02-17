@@ -1160,7 +1160,7 @@ module.exports = function(RED) {
                 manifest.include_manifest("$(MODDABLE)/examples/manifest_mod.json");
                 break;
             default:
-                manifest.include_manifest("$(MCUROOT)/manifest_runtime.json");
+                manifest.include_manifest("$(MCUROOT)/manifest_host.json");
         
         }
 
