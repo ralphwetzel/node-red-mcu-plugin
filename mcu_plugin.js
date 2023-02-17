@@ -1325,7 +1325,7 @@ module.exports = function(RED) {
                 manifest.resolver_paths.push(node.path)
             }
 
-            let p = manifest.get_manifest_of_module(module, dest);
+            let p = manifest.get_manifest_of_module(module, dest, n.type);
             if (p && typeof(p) === "string") {
                 manifest.include_manifest(p);
                 return;
