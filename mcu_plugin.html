@@ -2098,8 +2098,9 @@
 
                     xsb.onLogin = function () {
                         this.onBreak = this.doGo;
+                        this.doSetTime(Math.round(Date.now() / 1000));
                         this.doSetAllBreakpoints([{ path: "exceptions", line: 0 }]);
-
+                        
                         // we fake the initializing standard signal here...
                         this.onBubble({
                             "bubble": {

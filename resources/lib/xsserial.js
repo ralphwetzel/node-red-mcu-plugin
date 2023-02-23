@@ -378,4 +378,28 @@ class XsbugSerial extends XsbugConnection {
         );
     }
 
+	doSetTime(time, timezoneoffset, dstoffset) {
+		const payload = new DataView(new ArrayBuffer(12));
+		payload.setUint32(0, time, false);		// big endian
+
+        if (!timezoneoffset) {
+            timezoneoffset = new Date('November 1, 2020 00:00:00').getTimezoneOffset();
+            timezoneoffset *= -60;   // seconds
+            console.log(timezoneoffset);
+        }
+
+        // this needs to be verified at DST times...
+        if (!dstoffset) {
+            let todayoffset = new Date().getTimezoneOffset();
+            todayoffset *= -60;
+            dstoffset = timezoneoffset - todayoffset;
+            console.log(dstoffset);
+        }
+
+        payload.setUint32(4, timezoneoffset, false);
+        payload.setUint32(8, dstoffset, false);
+
+		this.sendBinaryCommand(9, payload);
+	}
+
 }
