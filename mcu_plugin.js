@@ -1407,6 +1407,7 @@ module.exports = function(RED) {
             });
 
             manifest.add_module("./main")
+            manifest.add_preload("flows");
         }
         
         // In case this is going to be changed again ;)
@@ -1522,6 +1523,7 @@ module.exports = function(RED) {
         });
 
         manifest.add_module("./main");
+        manifest.add_preload("flows");
 
         // enable editor message transmission by the MCU
         let editor_transmission_on = { "noderedmcu": { "editor": true }};
