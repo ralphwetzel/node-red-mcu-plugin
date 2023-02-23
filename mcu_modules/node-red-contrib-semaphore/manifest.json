@@ -18,5 +18,8 @@
     ],
     "modules": {
       "*": []
-    }
+    },
+    "preload": [
+      "node-red-contrib-semaphore"
+    ]
   }
