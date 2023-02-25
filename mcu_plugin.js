@@ -557,6 +557,8 @@ module.exports = function(RED) {
             'esp/sharp_memory_square',
             'esp/sparkfun_teensyview',
             'esp/switch_science_reflective_lcd',
+            'esp32/atoms3',
+            'esp32/atoms3_lite',
             'esp32/c3_32s_kit',
             'esp32/c3_32s_kit_2m',
             'esp32/esp32_st7789',
