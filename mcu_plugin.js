@@ -12,15 +12,11 @@ const os = require("os");
 const path = require("path");
 const {SerialPort} = require("serialport");
 
-const Eta = require("eta");
-
 const app_name = "node-red-mcu-plugin";
 
 const mcuProxy = require("./lib/proxy.js");
 const mcuNodeLibrary = require("./lib/library.js");
 const mcuManifest = require("./lib/manifest.js");
-
-const mcuMessageRelay = require("./lib/relay.js")
 
 // ***** AbortController
 // node@14: Established w/ 14.17; polyfill to be sure
@@ -176,18 +172,6 @@ function patched_copyObjectProperties(src,dst,copyList,blockList) {
 //
 // *****
 
-// *****
-// *
-// * Currently used EXPERIMENTAL Flags:
-// *
-// * 1: Mod Build Support
-// * 2: -- (next free)
-// * 4: ...
-//
-// * => This is tested as bit field!
-// *****
-let MCU_EXPERIMENTAL = process.env['MCU_EXPERIMENTAL'];
-
 let __VERSIONS__ = {};
 
 module.exports = function(RED) {
@@ -270,7 +254,7 @@ module.exports = function(RED) {
     if (os.platform() === "win32") {
         let testcmd = [
             `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" > nul`,
-            `cd /D ${MODDABLE}\\build\\bin\\win\\debug`,
+            `cd ${MODDABLE}\\build\\bin\\win\\debug`,
             'dumpbin /headers xsbug.exe | findstr "machine"'
         ].join(" && ");
 
@@ -382,11 +366,6 @@ module.exports = function(RED) {
     // *****
 
 
-    // ****
-    // Instance to forward messages from the MCU into runtime
-    let mcuRelay = new mcuMessageRelay.relay(RED);
-
-
     // *****
     // Apply a patch to hook into the node creation process of the runtime.
 
@@ -398,7 +377,6 @@ module.exports = function(RED) {
     function patched_createNode(flow,config) {
 
         let orig_type = config.type;
-        let give_proxy = false;
 
         if (config._mcu?.mcu === true) {
             if (config.type) {
@@ -406,7 +384,6 @@ module.exports = function(RED) {
                 if (t) {
                     // replacing original node w/ _mcu:... node
                     config.type = t;
-                    give_proxy = true;
 
                 } else {
                     // if no replacement node defined: Save the original type in config.void...
@@ -421,7 +398,7 @@ module.exports = function(RED) {
         let node = orig_createNode(flow, config);
 
         // give mcu replacement nodes access to the proxy
-        if (give_proxy) {
+        if (config.type !== orig_type) {
             node.__getProxy = getProxy;
         }
 
@@ -557,6 +534,8 @@ module.exports = function(RED) {
             'esp/sharp_memory_square',
             'esp/sparkfun_teensyview',
             'esp/switch_science_reflective_lcd',
+            'esp32/atoms3',
+            'esp32/atoms3_lite',
             'esp32/c3_32s_kit',
             'esp32/c3_32s_kit_2m',
             'esp32/esp32_st7789',
@@ -593,7 +572,6 @@ module.exports = function(RED) {
             'esp32/saola_wrover',
             'esp32/wemos_oled_lolin32',
             'esp32/wrover_kit',
-            'esp32/wt32_eth01',
             'gecko/blue',
             'gecko/giant',
             'gecko/mighty',
@@ -652,15 +630,7 @@ module.exports = function(RED) {
             platform_identifiers.splice(platform_identifiers.indexOf(platforms_verified[i]), 1);
         }
 
-        // add generic build targets
-        mcu_plugin_config.platforms = [];
-
-        ["esp", "esp32"].forEach((p) => {
-            mcu_plugin_config.platforms.push({value: p})
-        })
-
-        mcu_plugin_config.platforms.push(...platforms);
-
+        mcu_plugin_config.platforms = platforms;
     }
 
     {
@@ -724,26 +694,8 @@ module.exports = function(RED) {
         .then( (p) => {
             let ports = [];
             for (let i=0; i<p.length; i+=1) {
-
-                // Only process true hardware devices, reporting vendorId & productId.
-                // This might become an issue at some point in time ... to be addressed then!
-                if (!p[i].vendorId && !p[i].productId) {
-                    continue;
-                }
-
                 if (p[i].path && p[i].path.length > 0) {
-
-                    let pth = p[i].path;
-                    if ("darwin" === os.platform()) {
-                        // SerialPort (usually / only) reports the "/dev/tty." devices.
-                        // On MacOs, we yet need the  "/dev/cu."s to launch successfully!
-                        if (-1 < pth.indexOf("/dev/tty.")) {
-                            pth = pth.replace("/dev/tty.", "/dev/cu.")
-                        } else {
-                            continue;
-                        }
-                    }
-                    ports.push(pth);
+                    ports.push(p[i].path);
                 }
             }
             ports.sort();
@@ -805,12 +757,11 @@ module.exports = function(RED) {
 
                 // ToDo: We have to find an alternative logic for this!!
                 let running_node = RED.nodes.getNode(n.id);
-                running_node?.emit("mcu:plugin:build:prepare", n, nodes);
+                running_node?.emit("build4mcu", n, /*manifest*/);
 
+                // add node to flows.json
                 nodes.push(n);
-
             }
-            
         });
 
         /***** 
@@ -954,7 +905,7 @@ module.exports = function(RED) {
             }
         });
 
-        // Remove Link Out/In nodes & Junctions
+        // Remove Link Out/In nodes
         nodes = nodes.filter(function(node) {
             switch (node.type) {
                 case "link out":
@@ -975,9 +926,6 @@ module.exports = function(RED) {
                     }
 
                     // If not: eliminate!
-                    return false;
-
-                case "junction":
                     return false;
 
                 default:
@@ -1127,7 +1075,9 @@ module.exports = function(RED) {
         return nodes;
     }
 
-    function make_build_environment(nodes, working_directory, options) {
+    function make_build_environment(working_directory, options) {
+
+        let nodes = consolidate_mcu_nodes(options.ui);
 
         // Create target directory
         let dest = working_directory ?? fs.mkdtempSync(path.join(os.tmpdir(), app_name));
@@ -1154,16 +1104,7 @@ module.exports = function(RED) {
         const root_manifest_path = "./node-red-mcu"
         let rmp = path.resolve(__dirname, root_manifest_path);
         manifest.add_build("MCUROOT", rmp);
-
-        switch (options._mode) {
-            case "mod":
-                manifest.include_manifest("$(MODDABLE)/examples/manifest_mod.json");
-                break;
-            default:
-                manifest.include_manifest("$(MCUROOT)/manifest_host.json");
-        
-        }
-
+        manifest.include_manifest("$(MCUROOT)/manifest_runtime.json")
 
         // resolve core nodes directory => "@node-red/nodes"
         for (let i=0; i<manifest.resolver_paths.length; i+=1) {
@@ -1256,8 +1197,7 @@ module.exports = function(RED) {
 
         nodes.forEach(function (n) {
 
-            // check _mcu for any manifest information defind
-            if (n._mcu?.manifest?.trim?.().length > 0) {
+            if (n.type == "tab" && n._mcu?.manifest?.trim?.().length > 0) {
                 // Write the flow's manifest.json
                 fs.writeFileSync(path.join(dest, `manifest_${n.id}.json`), n._mcu.manifest.trim(), (err) => {
                     if (err) {
@@ -1265,22 +1205,6 @@ module.exports = function(RED) {
                     }
                 });
                 manifest.include_manifest(`./manifest_${n.id}.json`)
-            }
-
-            if (n._mcu?.include && Array.isArray(n._mcu.include)) {
-                n._mcu.include.forEach(function(m) {
-                    manifest.include_manifest(m);
-                });
-            }
-
-            if (n._mcu?.modules) {
-                try {
-                    n._mcu.modules.keys().forEach(function(k) {
-                        manifest.add_module(n._mcu.modules[k], k);
-                    })
-                } catch(err) {
-                    throw err;
-                }
             }
 
             // clean the config from the _mcu flag
@@ -1325,7 +1249,7 @@ module.exports = function(RED) {
                 manifest.resolver_paths.push(node.path)
             }
 
-            let p = manifest.get_manifest_of_module(module, dest, n.type);
+            let p = manifest.get_manifest_of_module(module, dest);
             if (p && typeof(p) === "string") {
                 manifest.include_manifest(p);
                 return;
@@ -1347,14 +1271,12 @@ module.exports = function(RED) {
         let app_options;
         if (options.ui && nodes_demanding_ui_support > 1) {
 
-            if ("mod" !== options._mode) {
-                // Dedicated includes
-                manifest.include_manifest("$(MCUROOT)/nodes/ui/manifest.json");
+            // Dedicated includes
+            manifest.include_manifest("$(MCUROOT)/nodes/ui/manifest.json");
 
-                // @ToDo: Check if really necessary!
-                manifest.include_manifest("$(MCUROOT)/nodes/random/manifest.json");
-                manifest.include_manifest("$(MCUROOT)/nodes/trigger/manifest.json");
-            }
+            // @ToDo: Check if really necessary!
+            manifest.include_manifest("$(MCUROOT)/nodes/random/manifest.json");
+            manifest.include_manifest("$(MCUROOT)/nodes/trigger/manifest.json");
 
             app_options = {
                 commandListLength: options.cll,
@@ -1368,7 +1290,7 @@ module.exports = function(RED) {
             // ui_base was already added.
             // Thus we remove it here again if present - as not necessary!
             let i = nodes.findIndex( (n) => { 
-                return "ui_base" == n.type; 
+                "ui_base" == n.type; 
             })
             if (-1 < i) {
                 nodes.splice(i, 1);
@@ -1398,18 +1320,15 @@ module.exports = function(RED) {
             ])
         }
 
-        if (options._mode !== "mod") {
-            // Write the main.js file
-            fs.writeFileSync(path.join(dest, "main.js"), mainjs.join("\r\n"), (err) => {
-                if (err) {
-                    throw err;
-                }
-            });
+        // Write the main.js file
+        fs.writeFileSync(path.join(dest, "main.js"), mainjs.join("\r\n"), (err) => {
+            if (err) {
+                throw err;
+            }
+        });
 
-            manifest.add_module("./main")
-            manifest.add_preload("flows");
-        }
-        
+        manifest.add_module("./main")
+
         // In case this is going to be changed again ;)
         let flows_file_data = JSON.stringify(nodes, null, 2)
         let flows_file_name = "flows.json"
@@ -1424,39 +1343,14 @@ module.exports = function(RED) {
         // add our flows.json
         manifest.add_module({"source": "./flows", "transform": "nodered2mcu"})
 
-        if (options._mode !== "mod") {
-            // currently omit for Mods
-            if (options?.creation) {
-                let c = JSON.parse(options.creation)
-                manifest.add(c, "creation");
-            }
+        if (options?.creation) {
+            let c = JSON.parse(options.creation)
+            manifest.add(c, "creation");
         }
 
-        // prevent setting config arguments via the command line!
-        {
-            let args = {};
-
-            if (options?.arguments) {
-                args = JSON.parse(options.arguments);
-            }
-
-            if (options.ssid) {
-                args['ssid'] = options.ssid;
-            }
-            if (options.password) {
-                args['password'] = options.password;
-            }
-
-            if (options._mode !== "mod") {
-                
-                // enable editor message transmission by the MCU
-                args['noderedmcu'] = {
-                    'editor': true
-                }
-            }
-
-            manifest.add(args, "config");
-        }
+        // enable editor message transmossion by the MCU
+        let editor_transmission_on = { "noderedmcu": { "editor": true }};
+        manifest.add(editor_transmission_on, "config");
 
         let m = manifest.get();
 
@@ -1471,100 +1365,7 @@ module.exports = function(RED) {
     
     }
 
-    function make_host_environment(nodes, working_directory, options) {
-
-        // Create target directory
-        let dest = working_directory ?? fs.mkdtempSync(path.join(os.tmpdir(), app_name));
-        fs.ensureDirSync(dest);
-
-        // Create and initialize the manifest builder
-        let mcu_nodes_root = path.resolve(__dirname, "./mcu_modules");
-        let manifest = new mcuManifest.builder(library, mcu_nodes_root);
-        manifest.initialize();
-
-        manifest.resolver_paths = [
-            require.main.path,
-            RED.settings.userDir
-        ]
-        
-        // Try to make this the first entry - before the includes!
-
-        // Add MODULES build path
-        const mbp = path.resolve(MODDABLE, "./modules");
-        manifest.add_build("MODULES", mbp);
-
-        // Add root manifest from node-red-mcu
-        // ToDo: node-red-mcu shall be a npm package as well - soon!
-        const root_manifest_path = "./node-red-mcu"
-        let rmp = path.resolve(__dirname, root_manifest_path);
-        manifest.add_build("MCUROOT", rmp);
-        manifest.include_manifest("$(MCUROOT)/manifest_host.json")
-
-        // Create main.js
-        let mainjs = fs.readFileSync(path.join(__dirname, "./templates/main_mod_host_ui_js.eta"), 'utf-8');
-
-        mainjs = Eta.render(mainjs,
-        {
-            cll: options.cll ?? 4096,
-            dll: options.dll ?? 4096,
-            tc: options.tc ?? 1,
-            pixels: options.px * options.py ?? (240*32)
-        })        
-
-        if (options.ui) {        
-            manifest.include_manifest("$(MCUROOT)/manifest_ui.json")
-        }
-
-        // Write the main.js file
-        fs.writeFileSync(path.join(dest, "main.js"), mainjs, (err) => {
-            if (err) {
-                throw err;
-            }
-        });
-
-        manifest.add_module("./main");
-        manifest.add_preload("flows");
-
-        // enable editor message transmission by the MCU
-        let editor_transmission_on = { "noderedmcu": { "editor": true }};
-        manifest.add(editor_transmission_on, "config");
-
-        // enable Mods
-        manifest.add({ "XS_MODS": 1 }, "defines");
-
-        // add strip definition
-        let strips = [
-            "Atomics",
-            "eval",
-            "FinalizationRegistry",
-            "Function",
-            "Generator",
-            // "RegExp",
-            "WeakMap",
-            "WeakRef",
-            "WeakSet"
-        ]
-        manifest.add(strips, "strip");
-
-        if (options?.creation) {
-            let c = JSON.parse(options.creation)
-            manifest.add(c, "creation");
-        }
-
-        let m = manifest.get();
-
-        // Write the (root) manifest.json
-        fs.writeFileSync(path.join(dest, "manifest.json"), manifest.get(), (err) => {
-            if (err) {
-                throw err;
-            }
-        });
-
-        return dest;
-
-    }
-
-    function build_flows(nodes, options, publish) {
+    function build_flows(options, publish) {
 
         options = options ?? {};
 
@@ -1582,16 +1383,10 @@ module.exports = function(RED) {
         publish_stdout("Starting build process...\n")
         publish_stdout(`Host system check: ${os.version()}\n`);
 
-        let x_win = __VERSIONS__.x_win;
-
-        if (x_win) {
-            publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable} (${"32" === x_win ? "x86" : "x64"})\n` );
+        if (__VERSIONS__.x_win) {
+            publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable} (${"32" === __VERSIONS__.x_win ? "x86" : "x64"})\n` );
         } else {
             publish_stdout(`MCU Build system check: p${__VERSIONS__.plugin} + #${__VERSIONS__.runtime} @ m${__VERSIONS__.moddable}\n` );
-            if (os.platform() === "win32") {
-                x_win = "x86";
-                publish_stdout(`Unable to determine if Windows OS is 32-bit (x86) or 64-bit (x64); forcing to (${x_win}).\n` );
-            }
         }
 
         publish_stdout(`HOME directory check: ${os.homedir()}\n`);
@@ -1677,24 +1472,13 @@ module.exports = function(RED) {
         publish_stdout(`Creating build environment for platform ${options.platform}.\n`)
 
         // Define local dir as working_directory based on options.id
-
-        let make_dir = path.join(RED.settings.userDir, "mcu-plugin-cache", `${options.id}${(['host', 'mod'].includes(options._mode)) ? ('-' + options._mode) : ""}`);
+        const make_dir = path.join(RED.settings.userDir, "mcu-plugin-cache", `${options.id}`);
         
         // only preliminary for testing!!
         fs.emptyDirSync(make_dir)
 
         try {
-            switch (options._mode) {
-                case "host":
-                    publish_stdout(`Creating build environment for a host to run mods.\n`)
-                    make_host_environment(nodes, make_dir, options);
-                    break;
-                case "mod":
-                    publish_stdout(`Creating build environment for a mod.\n`)
-                    // work done by make_build_environment
-                default:
-                    make_build_environment(nodes, make_dir, options);
-            }
+            make_build_environment(make_dir, options);
         } catch (err) {
             publish_stderr(err.toString() + "\n");
             return Promise.reject(err);
@@ -1785,15 +1569,11 @@ module.exports = function(RED) {
                 throw(`Invalid platform identifier given: ${pid}`);
         }
 
-        let cmd = options._mode == "mod" ? "mcrun" : "mcconfig"
+        let cmd = "mcconfig"
 
         if (options.debug === true) {
             cmd += " -d";
             cmd += ` -x localhost:${proxy_port_mcu}`
-
-            if (options.debugtarget == "1") {
-                cmd += " -l"
-            }
         }
 
         if (options.pixel) {
@@ -1816,29 +1596,26 @@ module.exports = function(RED) {
             cmd += " -r " + options.rotation;
         }
 
-        if (cmd !== "mcrun") {
-            // no -t option for mcrun
-            if (options.buildtarget) {
-                cmd += " -t " + options.buildtarget;
-            }    
+        if (options.buildtarget) {
+            cmd += " -t " + options.buildtarget;
         }
 
-        // {
-        //     let args = {};
-        //     if (options.arguments) {
-        //         args = JSON.parse(options.arguments);
-        //     }
-        //     if (options.ssid) {
-        //         args['ssid'] = options.ssid;
-        //     }
-        //     if (options.password) {
-        //         args['password'] = options.password;
-        //     }
+        {
+            let args = {};
+            if (options.arguments) {
+                args = JSON.parse(options.arguments);
+            }
+            if (options.ssid) {
+                args['ssid'] = options.ssid;
+            }
+            if (options.password) {
+                args['password'] = options.password;
+            }
 
-        //     for (key in args) {
-        //         cmd += ` ${key}='"${args[key]}"'`
-        //     }
-        // }
+            for (key in args) {
+                cmd += " " + key + '="' + args[key] + '"'
+            }
+        }
 
         let runner_options = {
             "cwd": make_dir,
@@ -1847,73 +1624,42 @@ module.exports = function(RED) {
 
         publish_stdout(`> cd ${make_dir}\n`);
 
-        let bcmds = [
-            '#!/bin/bash',
-            'runthis(){',
-            '   echo ">> $@"',
-            '   eval "$@"',
-            '}',
-        ]
+        let bcmds = [cmd];  // build_commands
 
         switch (pid) {
-
-            /* Not tested! */
-            case "pico":
-            case "gecko":
-            case "qca4020":
-            /* Not tested! */
-
             case "sim":
-
-                bcmds.push(`runthis ${cmd}`);
-                break;
-                
             case "esp":
-
-                env['UPLOAD_PORT'] = options.port;
-                publish_stdout(`UPLOAD_PORT = ${env['UPLOAD_PORT']}\n`);
-
-                bcmds.push(...[
-                    `runthis ${cmd}`
-                ])
-
+                // bcmds = [cmd];
                 break;
-
             case "esp32":
-
-                // mcrun looks for the UPLOAD_PORT with support of a python script.
-                // "python" yet may not be on the path thus the call has a potential to throw.
-                // => Ensure to set the UPLOAD_PORT to circumnavigate this python script...
-                // ... otherwise we needed to source export.sh or take another action to ensure "python" can be found!
-
-                env['UPLOAD_PORT'] = options.port;
-                publish_stdout(`UPLOAD_PORT = ${env['UPLOAD_PORT']}\n`);
-
                 if (os.platform() === "win32") {
                     // execFile doesn't expand the env variables... ??
                     bcmds = [
-                        `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars${x_win}.bat"`,
+                        `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars${__VERSIONS__.x_win}.bat"`,
                         'pushd %IDF_PATH%',
                         `CALL "${process.env["IDF_TOOLS_PATH"]}\\idf_cmd_init.bat"`,
                         'popd',
-                        `@echo ${cmd}`,
-                        `${cmd}`,
+                        cmd
                     ]
                 } else {
-
-                    // See remark above cencerning UPLOAD_PORT!
-                    if (options._mode !== "mod") {
-                        bcmds.push(
-                            'runthis "source \"$IDF_PATH/export.sh\""'
-                        )
-                    }
-
-                    bcmds.push(...[
+                    bcmds = [
+                        '#!/bin/bash',
+                        'runthis(){',
+                        '   echo ">> $@"',
+                        '   eval "$@"',
+                        '}',
+                        // 'echo "$PATH"',
+                        // 'runthis "source "$IDF_PATH/export.sh""',
+                        // 'echo "$PATH"',
                         'echo ">> IDF_PYTHON_ENV_PATH: $IDF_PYTHON_ENV_PATH"',
-                        `runthis ${cmd}`
-                    ])
-
+                        `runthis "${cmd}"`
+                    ]
                 }
+                break;
+            case "pico":
+            case "gecko":
+            case "qca4020":
+                // bcmds = [cmd];
                 break;
         }
 
@@ -1977,8 +1723,6 @@ module.exports = function(RED) {
             case "linux":
                 // runner_options["shell"] = "/bin/bash";
 
-                env["DISPLAY"] = ":0.0";
-                
             case "darwin":
 
                 publish_stdout("Creating build script file...\n")
@@ -2075,34 +1819,23 @@ module.exports = function(RED) {
 
             RED.httpAdmin.post(`${apiRoot}/build`, routeAuthHandler, (req, res) => {
                 
-                let options = req.body.options
-                if (!options) {
+                let build_options = req.body.options
+                if (!build_options) {
                     res.status(400).end();
                     return;
                 }
 
                 let mode = req.body.mode;
-
-                // final guard for build
-                if (!(MCU_EXPERIMENTAL & 1)) {
-                    if (["host", "mod"].includes(mode)) {
-                        throw "You need to define 'process.env.MCU_EXPERIMENTAL = 1' to enable Mod Support.";
-                    }
-                }
-
-                options._mode = mode ?? "";
-
                 if (mode === "reconnect") {
-                    options.buildtarget = "xsbug";
+                    build_options.buildtarget = "xsbug";
                 }
-
-                let nodes = consolidate_mcu_nodes(options.ui);
 
                 // *** Is this a valid assumption?
-                if (!options.make) {
-                    options.make = true;
+                if (!build_options.make) {
+                    build_options.make = true;
                 }
                 // ***
+
 
                 // abort the currently running runner
                 if (runner_promise && runner_abort) {
@@ -2120,28 +1853,118 @@ module.exports = function(RED) {
 
                 proxy = new mcuProxy.proxy(proxy_port_mcu, proxy_port_xsbug);
 
-                proxy.on("status", (id, data) => 
-                    mcuRelay.status(id, data)
-                )
+                proxy.on("status", (id, data) => {
 
-                proxy.on("input", (id, data) => 
-                    mcuRelay.input(id, data)
-                )
+                    /* {
+                        text: 1658087621772,
+                        source: { id: '799b7e8fcf64e1fa', type: 'debug', name: 'debug 4' }
+                    } */
+        
+                    let status = {};
+        
+                    let fill = data.fill;
+                    let shape = data.shape;
+                    let text = data.text;
+        
+                    if (fill) { status["fill"] = fill;}
+                    if (shape) { status["shape"] = shape;}
+                    if (text) { status["text"] = text;}
+        
+                    if (id) {
+                        RED.events.emit("node-status",{
+                            "id": id,
+                            "status": status
+                        });    
+                    }
+        
+                })
 
-                proxy.on("error", (id, data) => 
-                    mcuRelay.error(id, data)
-                )
+                proxy.on("input", (id, data) => {
+                    if (id) {
+                        let node = RED.nodes.getNode(id);
+                        if (node) {
+                            node.receive(data);
+                        }
+                    }
+                })
 
-                proxy.on("warn", (id, data) => 
-                    mcuRelay.warn(id, data)
-                )
+                proxy.on("error", (id, data) => {
+                    if (id) {
+                        let node = RED.nodes.getNode(id);
+                        if (node) {
+                            node.error(data.error);
+                        }
+                    }
+                })
 
-                proxy.on("mcu", (data) => 
-                    mcuRelay.mcu(data)
-                )
+                proxy.on("warn", (id, data) => {
+                    if (id) {
+                        let node = RED.nodes.getNode(id);
+                        if (node) {
+                            node.warn(data.warn);
+                        }
+                    }
+                })
+
+                proxy.on("mcu", (data) => {
+
+                    let token = "state";
+
+                    if (token in data === false)
+                        return;
+                    
+                    let s = data[token];
+                    let msg;
+                    let options;
+
+                    switch (s) {
+                        case "login":
+
+                            let from = data.from
+                            if (from.length > 0) {
+                                if (from === "main") {
+                                    msg = "MCU is initializing...";
+                                } else if (from.length > 6) {
+                                    let c = from.substring(0, 6);
+                                    let c_id = from.substring(6);
+                                    if (c === "config" && c_id == build_options.id) {
+                                        msg = "Simulator is initializing...";
+                                    }
+                                }
+                            }
+
+                            options = { type: "warning", timeout: 5000 };
+                            break;
+                        
+                        case "building":
+
+                        // building & ready fire almost simultaneously
+
+                        //     msg = "MCU building flows...";
+                        //     options = { type: "warning", timeout: 1000 };
+                        //     break;
+
+                        // case "ready":
+                            msg = "Flows are ready.";
+                            options = { timeout: 5000 };
+                            break;
+
+                        default:
+                            return;
+
+                    }
+
+                    if (msg && msg.length > 0) {
+                        RED.comms.publish("mcu/notify",  {
+                            "message": msg, 
+                            "options": options
+                        });    
+                    }
+
+                })
 
                 try {
-                    runner_promise = build_flows(nodes, options, RED.comms.publish)
+                    runner_promise = build_flows(build_options, RED.comms.publish)
                     .then( () => {
                         res.status(200).end();
                     })
@@ -2157,6 +1980,7 @@ module.exports = function(RED) {
 
             });
 
+
             RED.httpAdmin.get(`${apiRoot}/config`, routeAuthHandler, (req, res) => {
                 let c = {
                     "config": mcu_plugin_config.cache_data
@@ -2167,8 +1991,7 @@ module.exports = function(RED) {
             RED.httpAdmin.get(`${apiRoot}/config/plugin`, routeAuthHandler, (req, res) => {
                 let c = {
                     "platforms": mcu_plugin_config.platforms,
-                    "ports": mcu_plugin_config.ports,
-                    "experimental": MCU_EXPERIMENTAL ?? 0
+                    "ports": mcu_plugin_config.ports
                 }
                 res.status(200).end(JSON.stringify(c), "utf8")
             })
@@ -2185,105 +2008,8 @@ module.exports = function(RED) {
                 persist_cache(config);
                 res.status(200).end();    
             })
-            RED.httpAdmin.post(`${apiRoot}/backproxy`, routeAuthHandler, (req, res) => {
-                let msg;
-
-                if (req.body && req.body.msg) {
-                    msg = req.body.msg
-                }
-
-                console.log(msg.type);
-                
-                if (msg && mcuRelay[msg.type]) {
-                    mcuRelay[msg.type](msg.id, msg.data);
-                }
-
-                res.status(200).end();
-
-            })
-
-            RED.httpAdmin.post(`${apiRoot}/localflash`, routeAuthHandler, (req, res) => {
-                let options;
-                if (req.body && req.body.options) {
-                    options = req.body.options
-                } else {
-                    RED.log.error(`${app_name}: Failed to parse incoming config data.`);
-                    res.status(400).end();
-                    return;
-                }
-
-                let mode = req.body.mode;
-
-                options._mode = mode ?? "";
-
-                options.buildtarget = "build";
-
-                let nodes = consolidate_mcu_nodes(options.ui);
-
-                options.make = true;
-
-                // abort the currently running runner
-                if (runner_promise && runner_abort) {
-                    // console.log("Aborting...")
-                    runner_abort.abort();
-                    delete runner_promise;
-                    delete runner_abort;
-                }
-
-                try {
-                    runner_promise = build_flows(nodes, options, RED.comms.publish)
-                    .then( () => {
-
-                        let version = "debug";
-                        if (options.release === true) {
-                            version = "relese";
-                        }
-                        
-                        let pp = path.join(MODDABLE, "build", "bin", options.platform, version, options.id);
-                        if (!fs.existsSync(pp)) {
-                            RED.comms.publish("mcu/stdout/test", "bin data directory not found.", false);
-                        }
-        
-                        let files = {
-                            "bl": "bootloader.bin",
-                            "pt": "partition-table.bin",
-                            "xs": "xs_esp32.bin"
-                        }
-        
-                        let not_found = false;
-                        for (f in files) {
-                            let file = files[f];
-                            let fp = path.join(pp, file);
-        
-                            if (!fs.pathExistsSync(fp)) {
-                                not_found = true;
-                                files[f] = undefined;
-                                continue;
-                            }
-        
-                            let fb = fs.readFileSync(fp);
-                            // files[f] = fb.toJSON();
-                            files[f] = fb.toString("binary");
-                        }
-        
-                        if (not_found) {
-                            res.status(500).end();    
-                        }
-        
-                        res.status(200).end(JSON.stringify(files), "utf8");    
-                    })
-                    .catch((err) => {
-                        // RED.comms.publish("mcu/stdout/test", err.toString(), false);
-                        res.status(400).end();
-                    })
-                }
-                catch (err) {
-                    RED.comms.publish("mcu/stdout/test", err.toString(), false);
-                    res.status(400).end();
-                }
-
-            })
-
+                      
         }
     });
+    
 }
