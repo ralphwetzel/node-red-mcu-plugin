@@ -1254,6 +1254,11 @@ module.exports = function(RED) {
         // To prepare main.js
         let mainjs_additional_imports = [];
 
+        let type2manifest = {}; 
+        try {
+            type2manifest = require(path.join(rmp, "node_types.json"));
+        } catch {}
+
         nodes.forEach(function (n) {
 
             // check _mcu for any manifest information defind
@@ -1295,6 +1300,25 @@ module.exports = function(RED) {
             let module = node.module;
             if (!module) return;
             
+            if (n.type in type2manifest) {
+                
+                if (module === "node-red-dashboard") {
+                    if (!options.ui) {
+                        throw Error("This flow uses UI nodes - yet UI support is diabled. Please enable UI support.")
+                    }
+    
+                    nodes_demanding_ui_support += 1;
+                }
+
+                let mp = type2manifest[n.type];
+
+                if (mp.length > 0) {
+                    manifest.include_manifest(`$(MCUROOT)/${type2manifest[n.type]}`);
+                }
+
+                return;
+            }
+
             if (module === "node-red") {
                 if (n.type in nr_type_map) {
                     manifest.include_manifest(mcu_manifest(nr_type_map[n.type]));
