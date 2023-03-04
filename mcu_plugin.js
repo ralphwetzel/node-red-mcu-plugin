@@ -297,6 +297,16 @@ module.exports = function(RED) {
         }
     } catch {}
 
+    // get the commit hash of the main.js
+    try {
+        MAINJS = "99917a1";
+        let git_log = "git log -n 1 --pretty=format:%h -- main.js";
+        let mainjs_version = execSync(git_log, {"cwd": path.join(__dirname, "node-red-mcu"), encoding: "utf-8"});
+        if (mainjs_version !== MAINJS) {
+            RED.log.info(`*** ${app_name}: main.js version update indicated: #${MAINJS} -> #${mainjs_version}`);
+        }
+    } catch(err) {}
+
     // End: "env variable settings ..."
     // *****
 
@@ -1357,7 +1367,7 @@ module.exports = function(RED) {
             p = manifest.create_manifests_for_module(module, dest, n.type)
             if (p && typeof(p) === "string") {
                 manifest.include_manifest(p);
-                mainjs_additional_imports.push(`import "${module}";`);
+                mainjs_additional_imports.push(module);
             }
 
         });
@@ -1402,29 +1412,20 @@ module.exports = function(RED) {
         }
 
         // Create main.js
+        let mainjs = fs.readFileSync(path.join(__dirname, "./templates/main.js.eta"), 'utf-8');
 
-        let mainjs = [
-            'import "nodered";	// import for global side effects',
-            'import flows from "flows";'
-        ]
-        mainjs.push(...mainjs_additional_imports);
-        if (nodes_demanding_ui_support) {
-            mainjs.push(...[
-                'import buildModel from "./ui_nodes";',
-                'import { REDApplication }  from "./ui_templates";'
-            ])
-        }
-        mainjs.push('RED.build(flows);');
-        if (nodes_demanding_ui_support) {
-            mainjs.push(...[
-                'const model = buildModel();',
-                `new REDApplication(model, ${JSON.stringify(app_options)});`
-            ])
-        }
+        mainjs = Eta.render(mainjs,
+        {
+            imports: mainjs_additional_imports ?? [],
+            cll: options.cll ?? 4096,
+            dll: options.dll ?? 4096,
+            tc: options.tc ?? 1,
+            pixels: options.px * options.py ?? (240*32)
+        })        
 
         if (options._mode !== "mod") {
             // Write the main.js file
-            fs.writeFileSync(path.join(dest, "main.js"), mainjs.join("\r\n"), (err) => {
+            fs.writeFileSync(path.join(dest, "main.js"), mainjs, (err) => {
                 if (err) {
                     throw err;
                 }
