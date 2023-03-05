@@ -297,6 +297,16 @@ module.exports = function(RED) {
         }
     } catch {}
 
+    // get the commit hash of the main.js
+    try {
+        MAINJS = "99917a1";
+        let git_log = "git log -n 1 --pretty=format:%h -- main.js";
+        let mainjs_version = execSync(git_log, {"cwd": path.join(__dirname, "node-red-mcu"), encoding: "utf-8"});
+        if (mainjs_version !== MAINJS) {
+            RED.log.info(`*** ${app_name}: main.js version update indicated: #${MAINJS} -> #${mainjs_version}`);
+        }
+    } catch(err) {}
+
     // End: "env variable settings ..."
     // *****
 
@@ -557,8 +567,6 @@ module.exports = function(RED) {
             'esp/sharp_memory_square',
             'esp/sparkfun_teensyview',
             'esp/switch_science_reflective_lcd',
-            'esp32/atoms3',
-            'esp32/atoms3_lite',
             'esp32/c3_32s_kit',
             'esp32/c3_32s_kit_2m',
             'esp32/esp32_st7789',
@@ -575,6 +583,8 @@ module.exports = function(RED) {
             'esp32/m5atom_echo',
             'esp32/m5atom_lite',
             'esp32/m5atom_matrix',
+            'esp32/m5atom_s3',
+            'esp32/m5atom_s3_lite',
             'esp32/m5atom_u',
             'esp32/m5core_ink',
             'esp32/m5paper',
@@ -1256,6 +1266,11 @@ module.exports = function(RED) {
         // To prepare main.js
         let mainjs_additional_imports = [];
 
+        let type2manifest = {}; 
+        try {
+            type2manifest = require(path.join(rmp, "node_types.json"));
+        } catch {}
+
         nodes.forEach(function (n) {
 
             // check _mcu for any manifest information defind
@@ -1297,6 +1312,25 @@ module.exports = function(RED) {
             let module = node.module;
             if (!module) return;
             
+            if (n.type in type2manifest) {
+                
+                if (module === "node-red-dashboard") {
+                    if (!options.ui) {
+                        throw Error("This flow uses UI nodes - yet UI support is diabled. Please enable UI support.")
+                    }
+    
+                    nodes_demanding_ui_support += 1;
+                }
+
+                let mp = type2manifest[n.type];
+
+                if (mp.length > 0) {
+                    manifest.include_manifest(`$(MCUROOT)/${type2manifest[n.type]}`);
+                }
+
+                return;
+            }
+
             if (module === "node-red") {
                 if (n.type in nr_type_map) {
                     manifest.include_manifest(mcu_manifest(nr_type_map[n.type]));
@@ -1335,7 +1369,7 @@ module.exports = function(RED) {
             p = manifest.create_manifests_for_module(module, dest, n.type)
             if (p && typeof(p) === "string") {
                 manifest.include_manifest(p);
-                mainjs_additional_imports.push(`import "${module}";`);
+                mainjs_additional_imports.push(module);
             }
 
         });
@@ -1380,29 +1414,20 @@ module.exports = function(RED) {
         }
 
         // Create main.js
+        let mainjs = fs.readFileSync(path.join(__dirname, "./templates/main.js.eta"), 'utf-8');
 
-        let mainjs = [
-            'import "nodered";	// import for global side effects',
-            'import flows from "flows";'
-        ]
-        mainjs.push(...mainjs_additional_imports);
-        if (nodes_demanding_ui_support) {
-            mainjs.push(...[
-                'import buildModel from "./ui_nodes";',
-                'import { REDApplication }  from "./ui_templates";'
-            ])
-        }
-        mainjs.push('RED.build(flows);');
-        if (nodes_demanding_ui_support) {
-            mainjs.push(...[
-                'const model = buildModel();',
-                `new REDApplication(model, ${JSON.stringify(app_options)});`
-            ])
-        }
+        mainjs = Eta.render(mainjs,
+        {
+            imports: mainjs_additional_imports ?? [],
+            cll: options.cll ?? 4096,
+            dll: options.dll ?? 4096,
+            tc: options.tc ?? 1,
+            pixels: options.px * options.py ?? (240*32)
+        })        
 
         if (options._mode !== "mod") {
             // Write the main.js file
-            fs.writeFileSync(path.join(dest, "main.js"), mainjs.join("\r\n"), (err) => {
+            fs.writeFileSync(path.join(dest, "main.js"), mainjs, (err) => {
                 if (err) {
                     throw err;
                 }
