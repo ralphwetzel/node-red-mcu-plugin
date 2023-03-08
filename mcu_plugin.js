@@ -1518,8 +1518,9 @@ module.exports = function(RED) {
 
         // when everything else succeeded:
         // write the credentials
+        // https://github.com/ralphwetzel/node-red-mcu-plugin/issues/28#issuecomment-1460880983
         if (Object.keys(credentials).length > 0) {
-            fs.writeFileSync(path.join(dest, "credentials.json"), JSON.stringify(credentials), (err) => {
+            fs.writeFileSync(path.join(dest, "flows_cred_mcu.json"), JSON.stringify({ "credentials": credentials }), (err) => {
                 if (err) {
                     throw err;
                 }
