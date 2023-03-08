@@ -1021,11 +1021,24 @@ module.exports = function(RED) {
         }
 
         // add config nodes to the mcu nodes
-        for (key in configNodes) {
+        for (let key in configNodes) {
             if (configNodes[key].mcu === true) {
                 nodes.push(configNodes[key].node);
             }
         }
+
+        nodes.forEach((node) => {
+
+            // check if this node manages credentials
+            let n = RED.nodes.getNode(node.id);
+            if (n) {
+                if (n.credentials) {
+                    node._mcu ??= {};
+                    node._mcu["credentials"] = clone(n.credentials);
+                }
+            }
+
+        })
 
         // Add UI support
         if (with_ui_support) {
@@ -1269,7 +1282,17 @@ module.exports = function(RED) {
             type2manifest = require(path.join(rmp, "node_types.json"));
         } catch {}
 
+        // In case a node maintains credentials,
+        // we'll collect them here & save to credentials.json
+        let credentials = {}
+
         nodes.forEach(function (n) {
+
+            // care for the credentials first
+            if (n._mcu?.credentials) {
+                credentials[n.id] = clone(n._mcu.credentials);
+                delete n._mcu.credentials;
+            }
 
             // check _mcu for any manifest information defind
             if (n._mcu?.manifest?.trim?.().length > 0) {
@@ -1492,6 +1515,16 @@ module.exports = function(RED) {
                 throw err;
             }
         });
+
+        // when everything else succeeded:
+        // write the credentials
+        if (Object.keys(credentials).length > 0) {
+            fs.writeFileSync(path.join(dest, "credentials.json"), JSON.stringify(credentials), (err) => {
+                if (err) {
+                    throw err;
+                }
+            });
+        }
 
         return dest;
     
