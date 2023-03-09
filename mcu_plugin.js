@@ -583,6 +583,8 @@ module.exports = function(RED) {
             'esp32/m5atom_echo',
             'esp32/m5atom_lite',
             'esp32/m5atom_matrix',
+            'esp32/m5atom_s3',
+            'esp32/m5atom_s3_lite',
             'esp32/m5atom_u',
             'esp32/m5core_ink',
             'esp32/m5paper',
