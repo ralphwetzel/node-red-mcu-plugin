@@ -1274,6 +1274,42 @@ module.exports = function(RED) {
             "node-red-node-pi-neopixel": mcu_manifest("rpi-neopixels"),    // Att: this is pixel vs. pixel"s"
         }
 
+        // UI_Nodes support
+        // Check if ui_nodes need to be supported
+        // This has to be done upfront as ui_base might already be in the nodes array ...
+        // ... and we need to remove it (in case it's not needed) before enumerating the manifest.json(s)
+        {
+            let nodes_demanding_ui_support = 0;
+
+            nodes.forEach((n) => {
+                let node = library.get_node(n.type);
+                if (!node) return;
+                let module = node.module;
+                if (!module) return;
+
+                if (module === "node-red-dashboard" && n.type !== "ui_base") {
+                    if (!options.ui) {
+                        throw Error("This flow uses UI nodes - yet UI support is diabled. Please enable UI support.")
+                    }
+                    nodes_demanding_ui_support += 1;
+                }
+            })
+
+            if (nodes_demanding_ui_support < 1) {
+
+                // If the operator sets "UI Support" despite it's not necessary,
+                // ui_base was already added.
+                // Thus we remove it here again if present - as not necessary!
+                let i = nodes.findIndex( (n) => { 
+                    return "ui_base" == n.type; 
+                })
+                if (-1 < i) {
+                    nodes.splice(i, 1);
+                }
+
+            }
+        }
+
         // To prepare main.js
         let mainjs_additional_imports = [];
 
@@ -1335,14 +1371,6 @@ module.exports = function(RED) {
             
             if (n.type in type2manifest) {
                 
-                if (module === "node-red-dashboard") {
-                    if (!options.ui) {
-                        throw Error("This flow uses UI nodes - yet UI support is diabled. Please enable UI support.")
-                    }
-    
-                    nodes_demanding_ui_support += 1;
-                }
-
                 let mp = type2manifest[n.type];
 
                 if (mp.length > 0) {
@@ -1366,13 +1394,8 @@ module.exports = function(RED) {
                 manifest.include_manifest(mcu_module_map[module]);
                 return;
 
-            } else if (module === "node-red-dashboard") {
-                if (!options.ui) {
-                    throw Error("This flow uses UI nodes - yet UI support is diabled. Please enable UI support.")
-                }
-
-                nodes_demanding_ui_support += 1;
-                return;
+            // } else if (module === "node-red-dashboard") {
+            //     throw Error(`manifest.json for node type '${module}' is missing.`)
 
             } else if (module.indexOf("node-red-node-ui-") === 0) {
                 throw Error(`Node type '${module}' currently not supported on MCU.`)
@@ -1400,39 +1423,39 @@ module.exports = function(RED) {
             throw Error("No flow to build.")
         }
 
-        // UI_Nodes support
-        let app_options;
-        if (options.ui && nodes_demanding_ui_support > 1) {
+        // // UI_Nodes support
+        // let app_options;
+        // if (options.ui && nodes_demanding_ui_support > 1) {
 
-            if ("mod" !== options._mode) {
-                // Dedicated includes
-                manifest.include_manifest("$(MCUROOT)/nodes/ui/manifest.json");
+        //     if ("mod" !== options._mode) {
+        //         // Dedicated includes
+        //         manifest.include_manifest("$(MCUROOT)/nodes/ui/manifest.json");
 
-                // @ToDo: Check if really necessary!
-                manifest.include_manifest("$(MCUROOT)/nodes/random/manifest.json");
-                manifest.include_manifest("$(MCUROOT)/nodes/trigger/manifest.json");
-            }
+        //         // @ToDo: Check if really necessary!
+        //         manifest.include_manifest("$(MCUROOT)/nodes/random/manifest.json");
+        //         manifest.include_manifest("$(MCUROOT)/nodes/trigger/manifest.json");
+        //     }
 
-            app_options = {
-                commandListLength: options.cll,
-                displayListLength: options.dll,
-                touchCount: options.tc,
-                pixels: options.px * options.py
-            }
+        //     app_options = {
+        //         commandListLength: options.cll,
+        //         displayListLength: options.dll,
+        //         touchCount: options.tc,
+        //         pixels: options.px * options.py
+        //     }
 
-        } else {
-            // If the operator sets "UI Support" despite it's not necessary,
-            // ui_base was already added.
-            // Thus we remove it here again if present - as not necessary!
-            let i = nodes.findIndex( (n) => { 
-                return "ui_base" == n.type; 
-            })
-            if (-1 < i) {
-                nodes.splice(i, 1);
-            }
+        // } else {
+        //     // If the operator sets "UI Support" despite it's not necessary,
+        //     // ui_base was already added.
+        //     // Thus we remove it here again if present - as not necessary!
+        //     let i = nodes.findIndex( (n) => { 
+        //         return "ui_base" == n.type; 
+        //     })
+        //     if (-1 < i) {
+        //         nodes.splice(i, 1);
+        //     }
 
-            nodes_demanding_ui_support = 0;
-        }
+        //     nodes_demanding_ui_support = 0;
+        // }
 
         // Create main.js
         let mainjs = fs.readFileSync(path.join(__dirname, "./templates/main.js.eta"), 'utf-8');
