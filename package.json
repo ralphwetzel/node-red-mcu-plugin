@@ -3,7 +3,7 @@
   "version": "1.2.1-post",
   "description": "Plugin to integrate Node-RED MCU Edition into the Node-RED Editor",
   "node-red": {
-    "version": ">=2.0.0 <=3.0.2",
+    "version": ">=2.0.0 <4.0.0",
     "plugins": {
       "mcu": "mcu_plugin.js"
     }
