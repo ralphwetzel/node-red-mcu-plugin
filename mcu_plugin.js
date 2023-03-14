@@ -36,7 +36,9 @@ const resolve_package_path = require('resolve-package-path')
 let flows2build = [];
 let proxy;
 let proxy_port_mcu = 5004;
+
 let proxy_port_xsbug = 5002;
+let proxy_port_xsbug_log = 50002;
 
 let error_header = "*** Error while loading node-red-mcu-plugin:"
 
@@ -2203,7 +2205,7 @@ module.exports = function(RED) {
                     delete proxy;
                 }
 
-                proxy = new mcuProxy.proxy(proxy_port_mcu, proxy_port_xsbug);
+                proxy = new mcuProxy.proxy(proxy_port_mcu, "1" === options.debugtarget ? proxy_port_xsbug_log: proxy_port_xsbug););
 
                 proxy.on("status", (id, data) => 
                     mcuRelay.status(id, data)
