@@ -1008,7 +1008,7 @@ module.exports = function(RED) {
                 if (ok && typeof(ok)==="object") {
                     test_for_config_node(ok);
                 } else {
-                    if (key!=="id" && key!=="z" && key!=="type" && typeof(ok)==="string" && ok.length == 16) {
+                    if (key!=="id" && key!=="z" && key!=="type" && typeof(ok)==="string" && (ok.length == 16 || ok.length == 14)) {
                         cn = configNodes[ok];
                         if (cn && (cn.mcu !== true)) {
                             cn.mcu = true;
