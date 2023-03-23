@@ -2205,7 +2205,8 @@ module.exports = function(RED) {
                     delete proxy;
                 }
 
-                proxy = new mcuProxy.proxy(proxy_port_mcu, "1" === options.debugtarget ? proxy_port_xsbug_log: proxy_port_xsbug);
+                // proxy = new mcuProxy.proxy(proxy_port_mcu, "1" === options.debugtarget ? proxy_port_xsbug_log: proxy_port_xsbug);
+                proxy = new mcuProxy.proxy(proxy_port_mcu, proxy_port_xsbug);
 
                 proxy.on("status", (id, data) => 
                     mcuRelay.status(id, data)
