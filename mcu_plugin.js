@@ -1037,7 +1037,13 @@ module.exports = function(RED) {
             let n = RED.nodes.getNode(node.id);
             if (n) {
                 if (n.credentials) {
-                    node._mcu ??= {};
+
+                    // node._mcu ??= {};    // <= node 15+
+
+                    if (!node._mcu) {
+                        node._mcu = {};
+                    }
+
                     node._mcu["credentials"] = clone(n.credentials);
                 }
             }
