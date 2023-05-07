@@ -1381,11 +1381,11 @@ module.exports = function(RED) {
             
             if (n.type in type2manifest) {
                 
-                let mp = type2manifest[n.type];
+                // let mp = type2manifest[n.type];
 
-                if (mp.length > 0) {
-                    manifest.include_manifest(`$(MCUROOT)/${type2manifest[n.type]}`);
-                }
+                // if (mp.length > 0) {
+                //     manifest.include_manifest(`$(MCUROOT)/${type2manifest[n.type]}`);
+                // }
 
                 return;
             }
