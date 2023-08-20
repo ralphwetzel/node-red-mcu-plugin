@@ -642,7 +642,7 @@ module.exports = function(RED) {
                 let io = platforms_verified.indexOf(p);
                 if (!(io < 0)) {
                     platforms_verified.splice(io,1);
-                    platforms.push({value: p})
+                    platforms.push({value: p});
                 } else {
                     if (opener) {
                         RED.log.info(`*** ${app_name}:`);
@@ -650,7 +650,9 @@ module.exports = function(RED) {
                         RED.log.info("Please raise an issue @ our GitHub repository, stating the following information:");
                         opener = false;
                     }
-                    RED.log.info(`> New platform: ${p}`);
+                    platform_identifiers.
+                    RED.log.info(`> New platform: ${p}:Operation unknown`);
+                    platforms.push({value: p});
                 }
             }
         }
@@ -1871,7 +1873,10 @@ module.exports = function(RED) {
                     // env.PLATFORM = pid;
                     // if (platform[1]?.length > 0)
                     //     env.SUBPLATFORM = platform[1]
-                    break;
+                break;
+            case "nrf52":
+                    env.NRF_SDK_DIR = ensure_env_path("NRF_SDK_DIR", [`${HOME}/nrf5/nRF5_SDK_17.0.2_d674dde`]);
+                    break;        
             case "sim":
                 break;
             default:
