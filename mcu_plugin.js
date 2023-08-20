@@ -642,7 +642,7 @@ module.exports = function(RED) {
                 let io = platforms_verified.indexOf(p);
                 if (!(io < 0)) {
                     platforms_verified.splice(io,1);
-                    platforms.push({value: p})
+                    platforms.push({value: p});
                 } else {
                     if (opener) {
                         RED.log.info(`*** ${app_name}:`);
@@ -650,7 +650,6 @@ module.exports = function(RED) {
                         RED.log.info("Please raise an issue @ our GitHub repository, stating the following information:");
                         opener = false;
                     }
-                    platform_identifiers.
                     RED.log.info(`> New platform: ${p}:Operation unknown`);
                     platforms.push({value: p});
                 }
