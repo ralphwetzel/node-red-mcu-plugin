@@ -642,7 +642,7 @@ module.exports = function(RED) {
                 let io = platforms_verified.indexOf(p);
                 if (!(io < 0)) {
                     platforms_verified.splice(io,1);
-                    platforms.push({value: p});
+                    platforms.push({value: p})
                 } else {
                     if (opener) {
                         RED.log.info(`*** ${app_name}:`);
