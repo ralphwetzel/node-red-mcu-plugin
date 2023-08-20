@@ -1095,6 +1095,7 @@
                             { value: "pico", label: "Pico | Raspberry Pi" },
                             { value: "gecko", label: "Gecko | Silicon Labs" },
                             { value: "qca4020", label: "QCA4020 | Qualcomm" },
+                            { value: "nrf52", label: "nRF52 | Nordic" },
                         ],
                     }],
                 }).on('change', function (event, type, value) {
@@ -1123,6 +1124,8 @@
                         }
 
                     } else if (value == "pico") {
+                        row2.hide(500);
+                    } else if (value == "nrf52") {
                         row2.hide(500);
                     } else {
                         row2.show(500);
