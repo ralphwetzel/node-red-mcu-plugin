@@ -1958,6 +1958,7 @@ module.exports = function(RED) {
             case "pico":
             case "gecko":
             case "qca4020":
+            case "nrf52":
             /* Not tested! */
 
             case "sim":
