@@ -2039,9 +2039,9 @@ module.exports = function(RED) {
                     case "de-DE":       // this is 'de' on masOS
                         runner_options['encoding'] = "latin1";
                         break;
-                    case "ja-JP":
-                        runner_options['encoding'] = "Shift_JIS";
-                        break;
+                    //case "ja-JP":
+                    //    runner_options['encoding'] = "Shift_JIS";
+                    //    break;
                     default:
                         runner_options['encoding'] = "utf8";
                 }
