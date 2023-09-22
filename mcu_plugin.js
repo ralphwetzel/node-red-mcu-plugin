@@ -705,7 +705,7 @@ module.exports = function(RED) {
                         RED.log.info("Please raise an issue @ our GitHub repository, stating the following information:");
                         opener = false;    
                     }
-                    RED.log.info("> New simulator:", id);
+                    RED.log.info(`> New simulator: ${id}`);
                 } else {
                     sims_verified.splice(sims_verified.indexOf(id), 1);
                     platforms.push({value: id, label: simulator_identifiers[id]})
