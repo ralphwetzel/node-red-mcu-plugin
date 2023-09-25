@@ -668,7 +668,7 @@ module.exports = function(RED) {
                 let io = platforms_verified.indexOf(p);
                 if (!(io < 0)) {
                     platforms_verified.splice(io,1);
-                    platforms.push({value: p})
+                    platforms.push({value: p});
                 } else {
                     if (opener) {
                         RED.log.info(`*** ${app_name}:`);
@@ -676,7 +676,8 @@ module.exports = function(RED) {
                         RED.log.info("Please raise an issue @ our GitHub repository, stating the following information:");
                         opener = false;
                     }
-                    RED.log.info(`> New platform: ${p}`);
+                    RED.log.info(`> New platform(execution unknown): ${p}:`);
+                    platforms.push({value: p});
                 }
             }
         }
@@ -1898,7 +1899,18 @@ module.exports = function(RED) {
                     // env.PLATFORM = pid;
                     // if (platform[1]?.length > 0)
                     //     env.SUBPLATFORM = platform[1]
-                    break;
+                break;
+            case "nrf52":
+                switch (os.platform()) {
+                    case "win32":
+                        env.NRF52_SDK_PATH = ensure_env_path("NRF52_SDK_PATH", [`${HOME}/nrf5/nRF5_SDK_17.0.2_d674dde`]);
+                        break;
+                    case "linux": 
+                    case "darwin":
+                        env.NRF_SDK_DIR = ensure_env_path("NRF_SDK_DIR", [`${HOME}/nrf5/nRF5_SDK_17.0.2_d674dde`]);
+                        break;
+                    }
+                break;        
             case "sim":
                 break;
             default:
@@ -1981,11 +1993,20 @@ module.exports = function(RED) {
             case "pico":
             case "gecko":
             case "qca4020":
+            case "nrf52":
             /* Not tested! */
 
             case "sim":
-
+                if (os.platform() === "win32") {
+                    bcmds = [
+                        `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars${x_win}.bat"`,
+                        `@echo ${cmd}`,
+                        `${cmd}`,
+                    ]
+                }
+                else{
                 bcmds.push(`runthis ${cmd}`);
+                }
                 break;
                 
             case "esp":
@@ -2060,6 +2081,9 @@ module.exports = function(RED) {
                 switch (locale) {
                     case "de-DE":       // this is 'de' on masOS
                         runner_options['encoding'] = "latin1";
+                        break;
+                    case "ja-JP":
+                        bcmds.unshift(`chcp 437`);
                         break;
                     default:
                         runner_options['encoding'] = "utf8";
