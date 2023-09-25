@@ -571,17 +571,25 @@ module.exports = function(RED) {
             'esp/switch_science_reflective_lcd',
             'esp32/c3_32s_kit',
             'esp32/c3_32s_kit_2m',
+            'esp32/c3_devkit_rust',
             'esp32/esp32_st7789',
             'esp32/esp32_thing',
             'esp32/esp32_thing_plus',
             'esp32/esp32c3',
+            'esp32/esp32c3_cdc',
             'esp32/esp32s3',
+            'esp32/esp32s3_cdc',
             'esp32/esp32s3_usb',
             'esp32/heltec_lora_32',
             'esp32/heltec_wifi_kit_32',
             'esp32/kaluga',
             'esp32/lilygo_t5s',
+            'esp32/lilygo_t_qt',
+            'esp32/lilygo_tdisplay_s3',
             'esp32/lilygo_ttgo',
+            'esp32/lolin_c3mini',
+            'esp32/lolin_c3pico',
+            'esp32/lolin_s2mini',
             'esp32/m5atom_echo',
             'esp32/m5atom_lite',
             'esp32/m5atom_matrix',
@@ -592,6 +600,7 @@ module.exports = function(RED) {
             'esp32/m5paper',
             'esp32/m5stack',
             'esp32/m5stack_core2',
+            'esp32/m5stack_cores3',
             'esp32/m5stack_fire',
             'esp32/m5stick_c',
             'esp32/m5stick_cplus',
@@ -601,18 +610,31 @@ module.exports = function(RED) {
             'esp32/moddable_zero',
             'esp32/nodemcu',
             'esp32/oddwires',
+            'esp32/qtpyc3',
+            'esp32/qtpys2',
             'esp32/qtpys3',
+            'esp32/qtpys3-cdc',
             'esp32/s3_tft_feather',
             'esp32/saola_wroom',
             'esp32/saola_wrover',
             'esp32/wemos_oled_lolin32',
             'esp32/wrover_kit',
             'esp32/wt32_eth01',
+            'esp32/xiao_esp32c3',
+            'esp32/xiao_esp32s3',
             'gecko/blue',
             'gecko/giant',
             'gecko/mighty',
             'gecko/thunderboard',
             'gecko/thunderboard2',
+            'nrf52/dk',
+            'nrf52/itsybitsy',
+            'nrf52/makerdiary_nrf52',
+            'nrf52/moddable_four',
+            'nrf52/moddable_four_io',
+            'nrf52/sparkfun',
+            'nrf52/xiao',
+            'nrf52/xiao_ili9341',
             'pico/captouch',
             'pico/ili9341',
             'pico/itsybitsy',
@@ -623,8 +645,12 @@ module.exports = function(RED) {
             'pico/pico_w',
             'pico/picosystem',
             'pico/pro_micro',
+            'pico/qt_trinkey',
             'pico/qtpy',
             'pico/tiny2040',
+            'pico/ws_round',
+            'pico/ws_round_touch',
+            'pico/xiao_ili9341',
             'pico/xiao_rp2040',
             'qca4020/cdb'
         ]
@@ -685,7 +711,8 @@ module.exports = function(RED) {
             'sim/m5stickc': "M5Stick",
             'sim/moddable_one': "Moddable One",
             'sim/moddable_two': "Moddable Two",
-            'sim/moddable_three': "Moddable Three",     // this order looks better 
+            'sim/moddable_three': "Moddable Three",     // this order looks better
+            'sim/moddable_four': "Moddable Four",
             'sim/nodemcu': "Node MCU",
             'sim/pico_display': "Pico Display",
             'sim/pico_display_2': "Pico Display2"
@@ -706,7 +733,7 @@ module.exports = function(RED) {
                         RED.log.info("Please raise an issue @ our GitHub repository, stating the following information:");
                         opener = false;    
                     }
-                    RED.log.info("> New simulator:", id);
+                    RED.log.info(`> New simulator: ${id}`);
                 } else {
                     sims_verified.splice(sims_verified.indexOf(id), 1);
                     platforms.push({value: id, label: simulator_identifiers[id]})
