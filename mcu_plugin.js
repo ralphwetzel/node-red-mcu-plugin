@@ -1899,6 +1899,17 @@ module.exports = function(RED) {
                     // if (platform[1]?.length > 0)
                     //     env.SUBPLATFORM = platform[1]
                     break;
+            case "nrf52":
+                switch (os.platform()) {
+                    case "win32":
+                        env.NRF52_SDK_PATH = ensure_env_path("NRF52_SDK_PATH", [`${HOME}/nrf5/nRF5_SDK_17.0.2_d674dde`]);
+                        break;
+                    case "linux": 
+                    case "darwin":
+                        env.NRF_SDK_DIR = ensure_env_path("NRF_SDK_DIR", [`${HOME}/nrf5/nRF5_SDK_17.0.2_d674dde`]);
+                        break;
+                    }
+                break;        
             case "sim":
                 break;
             default:
@@ -1981,11 +1992,20 @@ module.exports = function(RED) {
             case "pico":
             case "gecko":
             case "qca4020":
+            case "nrf52":
             /* Not tested! */
 
             case "sim":
-
-                bcmds.push(`runthis ${cmd}`);
+                if (os.platform() === "win32") {
+                    bcmds = [
+                        `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars${x_win}.bat"`,
+                        `@echo ${cmd}`,
+                        `${cmd}`,
+                    ]
+                }
+                else{
+                    bcmds.push(`runthis ${cmd}`);
+                }
                 break;
                 
             case "esp":
