@@ -1092,8 +1092,9 @@
                             { value: "sim", label: "Simulator" },
                             { value: "esp", label: "ESP8266 | Espressif" },
                             { value: "esp32", label: "ESP32 | Espressif" },
-                            { value: "pico", label: "Pico | Raspberry Pi" },
                             { value: "gecko", label: "Gecko | Silicon Labs" },
+                            { value: "nrf52", label: "nRF52 | Nordic" },
+                            { value: "pico", label: "Pico | Raspberry Pi" },
                             { value: "qca4020", label: "QCA4020 | Qualcomm" },
                         ],
                     }],
@@ -1123,6 +1124,8 @@
                         }
 
                     } else if (value == "pico") {
+                        row2.hide(500);
+                    } else if (value == "nrf52") {
                         row2.hide(500);
                     } else {
                         row2.show(500);

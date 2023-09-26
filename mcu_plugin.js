@@ -1995,6 +1995,7 @@ module.exports = function(RED) {
             case "nrf52":
             /* Not tested! */
 
+            case "nrf52":
             case "sim":
                 if (os.platform() === "win32") {
                     bcmds = [
@@ -2080,6 +2081,9 @@ module.exports = function(RED) {
                 switch (locale) {
                     case "de-DE":       // this is 'de' on masOS
                         runner_options['encoding'] = "latin1";
+                        break;
+                    case "ja-JP":
+                        bcmds.unshift(`chcp 437`);
                         break;
                     default:
                         runner_options['encoding'] = "utf8";
