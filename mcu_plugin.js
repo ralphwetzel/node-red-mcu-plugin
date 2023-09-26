@@ -2061,6 +2061,9 @@ module.exports = function(RED) {
                     case "de-DE":       // this is 'de' on masOS
                         runner_options['encoding'] = "latin1";
                         break;
+                    case "ja-JP":
+                        bcmds.unshift(`chcp 437`);
+                        break;
                     default:
                         runner_options['encoding'] = "utf8";
                 }
