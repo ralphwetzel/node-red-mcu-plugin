@@ -511,6 +511,15 @@
             })
 
             return;
+        },
+
+        onremove: function() {
+            RED.events.off("flows:add", onFlowAdd)
+            RED.events.off("flows:remove", onObjectRemove)
+            RED.events.off("flows:change", onFlowChange)
+            RED.events.off("flows:reorder", onFlowsReorder)
+
+            RED.sidebar.removeTab("node-red-mcu");
         }
     })
 
