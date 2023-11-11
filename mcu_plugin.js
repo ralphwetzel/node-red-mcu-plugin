@@ -1855,77 +1855,81 @@ module.exports = function(RED) {
 
         const pid = platform[0] ?? ""
 
-        switch (pid) {
-            case "esp":
-                env.ESP_BASE = ensure_env_path("ESP_BASE", [
-                    `${HOME}/esp`,
-                    `${HOME}/.local/share/esp`
-                ]);
-                break;
-
-            case "esp32":
-                env.IDF_PATH = ensure_env_path("IDF_PATH", [
-                    `${HOME}/esp32/esp-idf`,
-                    `${HOME}/.local/share/esp32/esp-idf`
-                ]);
-
-                if (os.platform() == "win32") {
-                    env.IDF_TOOLS_PATH = ensure_env_path("IDF_TOOLS_PATH", [
-                        `C:\\Espressif`
+        try {
+            switch (pid) {
+                case "esp":
+                    env.ESP_BASE = ensure_env_path("ESP_BASE", [
+                        `${HOME}/esp`,
+                        `${HOME}/.local/share/esp`
                     ]);
-                }
-
-                try {
-                    // This one is a bit different: Take it if defined, yet don't care if not!
-                    env.IDF_PYTHON_ENV_PATH = ensure_env_path("IDF_PYTHON_ENV_PATH", []);
-                } catch(err) {
-                    publish_stdout(err.toString() + '\n');
-                }
-
-                break;
-
-            case "pico":
-                switch (os.platform()) {
-                    case "darwin":
-                        switch (os.arch()) {
-                            case "x64":
-                                env.PICO_GCC_ROOT = ensure_env_path("PICO_GCC_ROOT", [ {test: "/usr/local/bin/arm-none-eabi-gcc", value: `/usr/local`} ]);
-                                break;
-                            case "arm64":
-                                env.PICO_GCC_ROOT = ensure_env_path("PICO_GCC_ROOT", [ {test: "/opt/homebrew/bin/arm-none-eabi-gcc", value: `/opt/homebrew`} ]);
-                                break;
-                        }
-                        break;
-                    case "linux":
-                        env.PICO_GCC_ROOT = ensure_env_path("PICO_GCC_ROOT", [ {test: "/usr/bin/arm-none-eabi-gcc", value: "/usr"} ]);
-                        break;
-                }
-
-                env.PICO_SDK_DIR = ensure_env_path("PICO_SDK_DIR", [`${HOME}/pico/pico-sdk`]);
-                break;
-
-            case "gecko":
-            case "qca4020":
-                    // publish_stderr(`System setup support currently not implemented for platform ${options.platform}.`);
-                    // env.PLATFORM = pid;
-                    // if (platform[1]?.length > 0)
-                    //     env.SUBPLATFORM = platform[1]
                     break;
-            case "nrf52":
-                switch (os.platform()) {
-                    case "win32":
-                        env.NRF52_SDK_PATH = ensure_env_path("NRF52_SDK_PATH", [`${HOME}/nrf5/nRF5_SDK_17.0.2_d674dde`]);
-                        break;
-                    case "linux": 
-                    case "darwin":
-                        env.NRF_SDK_DIR = ensure_env_path("NRF_SDK_DIR", [`${HOME}/nrf5/nRF5_SDK_17.0.2_d674dde`]);
-                        break;
+
+                case "esp32":
+                    env.IDF_PATH = ensure_env_path("IDF_PATH", [
+                        `${HOME}/esp32/esp-idf`,
+                        `${HOME}/.local/share/esp32/esp-idf`
+                    ]);
+
+                    if (os.platform() == "win32") {
+                        env.IDF_TOOLS_PATH = ensure_env_path("IDF_TOOLS_PATH", [
+                            `C:\\Espressif`
+                        ]);
                     }
-                break;  
-            case "sim":
-                break;
-            default:
-                throw(`Invalid platform identifier given: ${pid}`);
+
+                    try {
+                        // This one is a bit different: Take it if defined, yet don't care if not!
+                        env.IDF_PYTHON_ENV_PATH = ensure_env_path("IDF_PYTHON_ENV_PATH", []);
+                    } catch(err) {
+                        publish_stdout(err.toString() + '\n');
+                    }
+
+                    break;
+
+                case "pico":
+                    switch (os.platform()) {
+                        case "darwin":
+                            switch (os.arch()) {
+                                case "x64":
+                                    env.PICO_GCC_ROOT = ensure_env_path("PICO_GCC_ROOT", [ {test: "/usr/local/bin/arm-none-eabi-gcc", value: `/usr/local`} ]);
+                                    break;
+                                case "arm64":
+                                    env.PICO_GCC_ROOT = ensure_env_path("PICO_GCC_ROOT", [ {test: "/opt/homebrew/bin/arm-none-eabi-gcc", value: `/opt/homebrew`} ]);
+                                    break;
+                            }
+                            break;
+                        case "linux":
+                            env.PICO_GCC_ROOT = ensure_env_path("PICO_GCC_ROOT", [ {test: "/usr/bin/arm-none-eabi-gcc", value: "/usr"} ]);
+                            break;
+                    }
+
+                    env.PICO_SDK_DIR = ensure_env_path("PICO_SDK_DIR", [`${HOME}/pico/pico-sdk`]);
+                    break;
+
+                case "gecko":
+                case "qca4020":
+                        // publish_stderr(`System setup support currently not implemented for platform ${options.platform}.`);
+                        // env.PLATFORM = pid;
+                        // if (platform[1]?.length > 0)
+                        //     env.SUBPLATFORM = platform[1]
+                        break;
+                case "nrf52":
+                    switch (os.platform()) {
+                        case "win32":
+                            env.NRF52_SDK_PATH = ensure_env_path("NRF52_SDK_PATH", [`${HOME}/nrf5/nRF5_SDK_17.0.2_d674dde`]);
+                            break;
+                        case "linux": 
+                        case "darwin":
+                            env.NRF_SDK_DIR = ensure_env_path("NRF_SDK_DIR", [`${HOME}/nrf5/nRF5_SDK_17.0.2_d674dde`]);
+                            break;
+                        }
+                    break;  
+                case "sim":
+                    break;
+                default:
+                    throw(`Invalid platform identifier given: ${pid}`);
+            }
+        } catch (err) {
+            return Promise.reject(err);
         }
 
         let cmd = options._mode == "mod" ? "mcrun" : "mcconfig"
