@@ -2070,6 +2070,12 @@ module.exports = function(RED) {
         runner_abort = new AbortController();
         runner_options["signal"] = runner_abort.signal;
 
+        let pe_us = process.env.UPLOAD_SPEED;
+        if (pe_us) {
+            env["UPLOAD_SPEED"] = pe_us;
+            publish_stdout(`UPLOAD_SPEED = ${pe_us}\n`);
+        }
+
         switch (os.platform()) {
             case "win32":
 
