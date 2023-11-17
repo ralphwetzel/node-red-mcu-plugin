@@ -1872,8 +1872,18 @@ module.exports = function(RED) {
 
                     if (os.platform() == "win32") {
                         env.IDF_TOOLS_PATH = ensure_env_path("IDF_TOOLS_PATH", [
+                            `${process.env["USERPROFILE"]}\\.espressif`,
                             `C:\\Espressif`
                         ]);
+                    } else {
+                        try {
+                            // This one is a bit different: Take it if defined, yet don't care if not!
+                            env.IDF_TOOLS_PATH = ensure_env_path("IDF_TOOLS_PATH", [
+                                `${HOME}/.espressif`,
+                            ]);
+                        } catch(err) {
+                            publish_stdout(err.toString() + '\n');
+                        }
                     }
 
                     // RDW
