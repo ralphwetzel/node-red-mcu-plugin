@@ -2037,6 +2037,13 @@ module.exports = function(RED) {
                 env['UPLOAD_PORT'] = options.port;
                 publish_stdout(`UPLOAD_PORT = ${env['UPLOAD_PORT']}\n`);
 
+                // debugging for https://discourse.nodered.org/t/mcu-plugin-tooling-works-from-a-shell-but-not-from-the-plugin-sidebar/82457
+                
+                publish_stdout(`IDF_TOOLS_EXPORT_CMD = ${env['IDF_TOOLS_EXPORT_CMD']}\n`);
+                publish_stdout(`IDF_PYTHON_ENV_PATH = ${env['IDF_PYTHON_ENV_PATH']}\n`);
+                publish_stdout(`OPENOCD_SCRIPTS = ${env['OPENOCD_SCRIPTS']}\n`);
+                publish_stdout(`ESP_IDF_VERSION = ${env['ESP_IDF_VERSION']}\n`);
+
                 if (os.platform() === "win32") {
                     // execFile doesn't expand the env variables... ??
                     bcmds = [
