@@ -1876,12 +1876,17 @@ module.exports = function(RED) {
                         ]);
                     }
 
-                    try {
-                        // This one is a bit different: Take it if defined, yet don't care if not!
-                        env.IDF_PYTHON_ENV_PATH = ensure_env_path("IDF_PYTHON_ENV_PATH", []);
-                    } catch(err) {
-                        publish_stdout(err.toString() + '\n');
-                    }
+                    // RDW
+                    // Introduced in 12/2022, removen in 11/23
+                    // pro: https://github.com/phoddie/node-red-mcu/discussions/46#discussioncomment-4443559
+                    // against: https://discourse.nodered.org/t/mcu-plugin-tooling-works-from-a-shell-but-not-from-the-plugin-sidebar/82457/9
+                    
+                    // try {
+                    //     // This one is a bit different: Take it if defined, yet don't care if not!
+                    //     env.IDF_PYTHON_ENV_PATH = ensure_env_path("IDF_PYTHON_ENV_PATH", []);
+                    // } catch(err) {
+                    //     publish_stdout(err.toString() + '\n');
+                    // }
 
                     break;
 
