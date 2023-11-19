@@ -1047,7 +1047,8 @@ module.exports = function(RED) {
                 if (ok && typeof(ok)==="object") {
                     test_for_config_node(ok);
                 } else {
-                    if (key!=="id" && key!=="z" && key!=="type" && typeof(ok)==="string" && (14 <= ok.length <= 16)) {
+                    // Regex as proposed by Steve: https://github.com/ralphwetzel/node-red-mcu-plugin/commit/0cb67f85262705e2c812df6819e3ebd511189d20#commitcomment-132987108
+                    if (key!=="id" && key!=="z" && key!=="type" && typeof(ok)==="string" && ok.match(/^[0-9a-f]{8}\.?[0-9a-f]{3,8}$/i)) {
                         cn = configNodes[ok];
                         if (cn && (cn.mcu !== true)) {
                             cn.mcu = true;
