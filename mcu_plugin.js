@@ -407,7 +407,7 @@ module.exports = function(RED) {
     }
 
     let orig_createNode = flowUtil.createNode;
-    function patched_createNode(flow,config) {
+    async function patched_createNode(flow,config) {
 
         let orig_type = config.type;
         let give_proxy = false;
@@ -430,7 +430,7 @@ module.exports = function(RED) {
             }
         }
 
-        let node = orig_createNode(flow, config);
+        let node = await orig_createNode(flow, config);
 
         // give mcu replacement nodes access to the proxy
         if (give_proxy) {
