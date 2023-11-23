@@ -9,6 +9,9 @@ Currently, `Serial In` - node & `Serial Out` - Node are supported.
 The major difference to the standard implementation derives from the demand to define the pin parameters of the serial interface to be used by these nodes.
 As the property editor doesn't provide a better option, this pin parameter definition has to be entered as _Serial Port path_, e.g. `/P2/R33/T19`.
 
+<img alt="mcu_example" src="resources/mcu_example.png"
+    style="min-width: 474px; width: 474px; align: center; border: 1px solid lightgray;"/>
+
 * `/Px`: Port number
 * `/Rx`: Receive (RX) pin number
 * `/Tx`: Transmit (TX) pin number
