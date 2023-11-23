@@ -208,8 +208,14 @@ class mcuSerialPort extends Node {
                 }, self.newline); 
             },
             "pass": function (buf) {
-                // send_buffer will split this array into single elements!
-                send_buffer(buf);
+
+                // explode the buffer into arrays of single element
+                let forward = [];
+                buf.forEach( (value) => {
+                    forward.push(new Uint8Array([value]));
+                });
+
+                send_buffer(forward);
             }
         }
 
