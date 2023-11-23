@@ -101,8 +101,13 @@ class mcuSerialPort extends Node {
             }
 
             if (self.bin !== "bin") {
+                let ac = String.fromCharCode(self.addchar);
                 for (let i=0;i<data.length;i++) {
-                    data[i] = String.fromCharCode(...data[i]);
+                    data[i] = String.fromCharCode(...data[i], self.addchar);
+                }
+            } else if (self.addchar.length > 0) {
+                for (let i=0;i<data.length;i++) {
+                    data[i] = concat(data[i], self.addchar);
                 }
             }
 

@@ -29,7 +29,7 @@ This implementaton supports the following properties for a `Serial Port` definit
 - [x] Split input: character, timeout, silence, length
 - [x] Deliver: Binary Buffer, ASCII strings
 - [x] Stream of single bytes / chars 
-- [ ] Append output character
+- [x] Append output character
 - [ ] Request response timeout
 
 > This shim may be removed as soon as an implementation of `node-red-node-serialport` is incorporated into core `node-red-mcu`.
