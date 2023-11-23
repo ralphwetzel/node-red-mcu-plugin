@@ -1,0 +1,24 @@
+{
+  "//": {
+    "***": "https://github.com/ralphwetzel/node-red-mcu-plugin",
+    "npm": "node-red-node-serialport",
+    "xs": "manifest.json",
+    "@": "2023-11-21T21:01:25.889Z",
+    "ref": "https://github.com/Moddable-OpenSource/moddable",
+    "template": {
+      "build": ["MCUMODULES"]
+    }
+  },
+  "build": {
+  },
+  "include": [
+    "$(MCUMODULES)/require/manifest.json"
+  ],
+  "modules": {
+    "*": [],
+    "node-red-node-serialport": "$(MCUMODULES)/node-red-node-serialport/serialport.js"
+  },
+  "preload": [
+    "node-red-node-serialport"
+  ]
+}
