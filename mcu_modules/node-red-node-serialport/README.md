@@ -19,13 +19,13 @@ The order of the _path elements_ doesn't matter.
 
 This implementaton supports the following properties for a `Serial Port` definition in `node-red-node-serialport`:
 
-- [ x ] Baud Rate
-- [ o ] Data Bits, Parity, Stop Bits: According ECMA-419 version 2, always `8N1``. 
+- [x] Baud Rate
+- [ ] Data Bits, Parity, Stop Bits: According ECMA-419 version 2, always `8N1``. 
 - [ ] DTR, RTS, CTS, DSR
-- [ x ] Start character
-- [ x ] Split input: character, timeout, silence, length
-- [ x ] Deliver: Binary Buffer, ASCII strings
-- [ x ] Stream of single bytes / chars 
+- [x] Start character
+- [x] Split input: character, timeout, silence, length
+- [x] Deliver: Binary Buffer, ASCII strings
+- [x] Stream of single bytes / chars 
 - [ ] Append output character
 - [ ] Request response timeout
 
