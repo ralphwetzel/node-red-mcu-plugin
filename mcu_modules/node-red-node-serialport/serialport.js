@@ -96,16 +96,17 @@ class mcuSerialPort extends Node {
                 return;
             }
 
-            if (!Array.isArray(data)) {
-                data = [data];
-            }
-
             if (self.bin !== "bin") {
-                let ac = String.fromCharCode(self.addchar);
-                for (let i=0;i<data.length;i++) {
-                    data[i] = String.fromCharCode(...data[i], self.addchar);
+                if (self.addchar) {
+                    for (let i=0;i<data.length;i++) {
+                        data[i] = String.fromCharCode(...data[i], self.addchar);
+                    }    
+                } else {
+                    for (let i=0;i<data.length;i++) {
+                        data[i] = String.fromCharCode(...data[i]);
+                    }    
                 }
-            } else if (self.addchar.length > 0) {
+            } else if (self.addchar > 0) {
                 for (let i=0;i<data.length;i++) {
                     data[i] = concat(data[i], self.addchar);
                 }
