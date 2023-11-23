@@ -13,9 +13,7 @@ class mcuSerialPort extends Node {
 
     static type = "serial-port";
 
-    // read_buffer = new Buffer(0);
     #read_timeout;
-    #inter_timeout;
 
     onStart(config) {
         super.onStart(config);
@@ -27,16 +25,16 @@ class mcuSerialPort extends Node {
         self.newline = config.newline; /* overloaded: split character, timeout, or character count */
         self.addchar = config.addchar || "";
         self.serialbaud = parseInt(config.serialbaud) || 57600;
-        self.databits = 8 // NOT SUPPORTED! parseInt(config.databits) || 8;
-        self.parity = "none" // config.parity || "none";
-        self.stopbits = 1 // parseInt(config.stopbits) || 1;
-        self.dtr = "none" // config.dtr || "none";
-        self.rts = "none" // config.rts || "none";
-        self.cts = "none" // config.cts || "none";
-        self.dsr = "none" // config.dsr || "none";
+        // self.databits = 8 // NOT SUPPORTED! parseInt(config.databits) || 8;
+        // self.parity = "none" // config.parity || "none";
+        // self.stopbits = 1 // parseInt(config.stopbits) || 1;
+        // self.dtr = "none" // config.dtr || "none";
+        // self.rts = "none" // config.rts || "none";
+        // self.cts = "none" // config.cts || "none";
+        // self.dsr = "none" // config.dsr || "none";
         self.bin = config.bin || "false";
         self.out = config.out || "char";
-        self.responsetimeout = config.responsetimeout || 10000;
+        // self.responsetimeout = config.responsetimeout || 10000;
 
         let convert = function(input) {
             // from 25-serial.js:
@@ -111,10 +109,6 @@ class mcuSerialPort extends Node {
                     data[i] = concat(data[i], self.addchar);
                 }
             }
-
-            // let msg = {}
-            // msg._msgid ??= RED.util.generateId();
-            // msg.payload = data;
 
             self.listeners.forEach(l => {
                 data.forEach( (d) => {
@@ -225,24 +219,6 @@ class mcuSerialPort extends Node {
             process_on_read = processor["pass"];            
         }
 
-        // let read_into_buffer = function (count) {
-        //     process_on_read(new Uint8Array(this.read()));
-        // }
-
-        // let find_start_char = function (count) {
-        //     let buf = new Uint8Array(this.read());
-        //     let start = buf.indexOf(self.waitfor);
-
-        //     if (start > -1) {
-        //         if (self.serial) {
-        //             self.serial.onReadable = read_into_buffer;
-        //         }
-        //         if (buf.length > start + 1) {
-        //             process_on_read(buf.slice(start + 1));
-        //         }
-        //     }
-        // }
-
         self.serial = new device.io.Serial({
             ...device.Serial.default,
             baud: parseInt(config.serialbaud) || 115200,
@@ -265,8 +241,6 @@ class mcuSerialPort extends Node {
                 process_on_read(buf);
             }
         });
-
-        // self.serial.onReadable = self.waitfor ? find_start_char : read_into_buffer;
 
         self.register_listener = function(id) {
             let n = RED.nodes.getNode(id);
@@ -319,6 +293,7 @@ class mcuSerialOut extends Node {
 
 }
 
+
 class mcuSerialIn extends Node {
 
     static type = "serial in";
@@ -337,7 +312,6 @@ class mcuSerialIn extends Node {
         this.send(msg);
         done();
     }
-
 
     static {
         RED.nodes.registerType(this.type, this);
