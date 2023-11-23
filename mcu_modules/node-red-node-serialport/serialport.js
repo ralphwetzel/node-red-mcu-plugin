@@ -40,12 +40,7 @@ class mcuSerialPort extends Node {
 
         let convert = function(input) {
             // from 25-serial.js:
-            input = input.replace("\\n","\n");
-            input = input.replace("\\r","\r");
-            input = input.replace("\\t","\t");
-            input = input.replace("\\e","\e");
-            input = input.replace("\\f","\f");
-            input = input.replace("\\0","\0"); // jshint ignore:line
+            input = input.replace("\\n","\n").replace("\\r","\r").replace("\\t","\t").replace("\\e","\e").replace("\\f","\f").replace("\\0","\0"); // jshint ignore:line
             if (input.substr(0,2) == "0x") {
                 input = parseInt(input,16);
             } else {
@@ -59,7 +54,16 @@ class mcuSerialPort extends Node {
 
         self.waitfor = convert(config.waitfor);
         self.addchar = convert(config.addchar) || "";
-        self.newline = ("count" == self.out) ? Number(self.newline) : convert(config.newline);
+
+        switch (self.out) {
+            case "char": {
+                self.newline = convert(config.newline);
+                break;
+            }
+            default: {
+                self.newline = Number(config.newline);
+            }
+        }
 
         let parts = config.serialport.split("/");
         let res = {
