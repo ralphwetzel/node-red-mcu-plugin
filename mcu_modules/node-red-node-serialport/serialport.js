@@ -20,6 +20,7 @@ class mcuSerialPort extends Node {
         let self = this;
 
         self.listeners = [];
+        self.on_status = [];
         self.read_buffer = undefined;
 
         self.newline = config.newline; /* overloaded: split character, timeout, or character count */
@@ -239,6 +240,11 @@ class mcuSerialPort extends Node {
                     return;
                 }
                 process_on_read(buf);
+            },
+            onWritable: function() {
+                self.on_status.forEach( (n) => {
+                    n.status({fill:"green",shape:"dot",text:"connected"})
+                })
             }
         });
 
@@ -246,6 +252,13 @@ class mcuSerialPort extends Node {
             let n = RED.nodes.getNode(id);
             if (n) {
                 self.listeners.push(n);
+            }
+        }
+
+        self.register_status = function(id) {
+            let n = RED.nodes.getNode(id);
+            if (n) {
+                self.on_status.push(n);
             }
         }
 
@@ -270,6 +283,12 @@ class mcuSerialOut extends Node {
     onStart(config) {
         super.onStart(config);
         this.serialConfig = config.serial;
+
+        this.serial = RED.nodes.getNode(this.serialConfig);
+        if (this.serial) {
+            this.serial.register_status(this.id);
+        }
+
     }
 
     onMessage(msg, done) {
@@ -305,7 +324,11 @@ class mcuSerialIn extends Node {
         this.serial = RED.nodes.getNode(this.serialConfig);
         if (this.serial) {
             this.serial.register_listener(this.id);
+            this.serial.register_status(this.id);
         }
+
+        this.status({fill:"grey",shape:"dot",text:"not connected"})
+
     }
 
     onMessage(msg, done) {
