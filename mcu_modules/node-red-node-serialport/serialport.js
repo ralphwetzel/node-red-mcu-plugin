@@ -48,7 +48,6 @@ class mcuSerialPort extends Node {
                     input = input.charCodeAt(0);
                 }
             }
-            console.log(input);
             return input;
         }
 
@@ -72,14 +71,10 @@ class mcuSerialPort extends Node {
             "R": 3
         };
 
-        console.log("parsing port", parts);
-        
         Object.keys(res).forEach( k => {
-            console.log(k);
             for (let i=0; i<parts.length; i++) {
                 if (parts[i]?.[0] == k) {
                     res[k] = parseInt(parts[i].substring(1));
-                    console.log(k, res[k]);
                     break;
                 }
             }
@@ -136,8 +131,6 @@ class mcuSerialPort extends Node {
                     buf = concat(self.read_buffer, buf);
                 }
                 let length = buf.length;
-
-                console.log(self.newline);
 
                 do {
                     split = buf.indexOf(self.newline, start);
@@ -322,10 +315,8 @@ class mcuSerialIn extends Node {
         super.onStart(config);
         this.serialConfig = config.serial;
 
-        console.log(this.serialConfig);
         this.serial = RED.nodes.getNode(this.serialConfig);
         if (this.serial) {
-            console.log("reg_list", this.id)
             this.serial.register_listener(this.id);
         }
     }
