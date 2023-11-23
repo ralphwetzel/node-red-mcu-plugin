@@ -1,6 +1,6 @@
 /*
     node-red-node-serialport / Shim by @ralphwetzel
-    Copyright 2022 - 2023 Ralph Wetzel
+    Copyright 2023 Ralph Wetzel
     https://github.com/ralphwetzel/node-red-mcu-plugin
     License: MIT
 */
@@ -220,8 +220,7 @@ class mcuSerialPort extends Node {
             process_on_read = processor["pass"];            
         }
 
-        self.serial = new device.io.Serial({
-            ...device.Serial.default,
+        self.serial = new Serial({
             baud: parseInt(config.serialbaud) || 115200,
             port: res.P,
             receive: res.R,
@@ -242,9 +241,10 @@ class mcuSerialPort extends Node {
                 process_on_read(buf);
             },
             onWritable: function() {
-                self.on_status.forEach( (n) => {
-                    n.status({fill:"green",shape:"dot",text:"connected"})
-                })
+                // disable - as we have no way to reset this status
+                // self.on_status.forEach( (n) => {
+                //     n.status({fill:"green",shape:"dot",text:"connected"})
+                // })
             }
         });
 
@@ -327,7 +327,8 @@ class mcuSerialIn extends Node {
             this.serial.register_status(this.id);
         }
 
-        this.status({fill:"grey",shape:"dot",text:"not connected"})
+        // disable - doesn't make sense, as no way to reset a status!
+        // this.status({fill:"grey",shape:"dot",text:"not connected"})
 
     }
 
