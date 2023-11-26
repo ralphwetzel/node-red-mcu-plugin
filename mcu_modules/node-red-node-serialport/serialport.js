@@ -241,10 +241,9 @@ class mcuSerialPort extends Node {
                 process_on_read(buf);
             },
             onWritable: function() {
-                // disable - as we have no way to reset this status
-                // self.on_status.forEach( (n) => {
-                //     n.status({fill:"green",shape:"dot",text:"connected"})
-                // })
+                self.on_status.forEach( (n) => {
+                    n.status({fill:"green",shape:"dot",text:"connected"})
+                })
             }
         });
 
@@ -327,8 +326,7 @@ class mcuSerialIn extends Node {
             this.serial.register_status(this.id);
         }
 
-        // disable - doesn't make sense, as no way to reset a status!
-        // this.status({fill:"grey",shape:"dot",text:"not connected"})
+        this.status({fill:"grey",shape:"dot",text:"not connected"})
 
     }
 
