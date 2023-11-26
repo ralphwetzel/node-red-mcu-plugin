@@ -360,13 +360,6 @@ module.exports = function(RED) {
                     if (this.__getProxy) {
                         let p = this.__getProxy();
                         if (p) {
-
-        // This affects the runtime representation of the node!
-        if (!this._mcu) {
-            this._mcu = {};
-        }
-        this._mcu.reset_status_on_abort = true;
-
                             p.send2mcu("debug", this.z, this.id, this._active);
                         }
                     }
@@ -374,6 +367,13 @@ module.exports = function(RED) {
                 }
             })
         }
+
+        // This affects the runtime representation of the node!
+        if (!dn._mcu) {
+            dn._mcu = {};
+        }
+        dn._mcu.reset_status_on_abort = true;
+
         return dn;
     }
     RED.nodes.registerType("_mcu:debug", mcu_debug);
@@ -383,18 +383,18 @@ module.exports = function(RED) {
     // This gives us access to the basic functionality of a node, like emitting warnings & errors.
     function mcu_void(config) {
 
-        // This affects the runtime representation of the node!
-        if (!this._mcu) {
-            this._mcu = {};
-        }
-        this._mcu.reset_status_on_abort = true;
-
         // Let's give back this voided node it's original type!
         if ("void" in config) {
             config.type = config.void;
         }
 
         RED.nodes.createNode(this, config);
+
+        // This affects the runtime representation of the node!
+        if (!this._mcu) {
+            this._mcu = {};
+        }
+        this._mcu.reset_status_on_abort = true;
     }
     RED.nodes.registerType("_mcu:void", mcu_void);
 
