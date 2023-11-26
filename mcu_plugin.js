@@ -325,6 +325,13 @@ module.exports = function(RED) {
             }
             return;
         });
+
+        // This affects the runtime representation of the node!
+        if (!this._mcu) {
+            this._mcu = {};
+        }
+        this._mcu.reset_status_on_abort = true;
+
     }
     RED.nodes.registerType("_mcu:inject", mcu_inject);
     registerMCUModeType("inject", "_mcu:inject")
@@ -353,6 +360,13 @@ module.exports = function(RED) {
                     if (this.__getProxy) {
                         let p = this.__getProxy();
                         if (p) {
+
+        // This affects the runtime representation of the node!
+        if (!this._mcu) {
+            this._mcu = {};
+        }
+        this._mcu.reset_status_on_abort = true;
+
                             p.send2mcu("debug", this.z, this.id, this._active);
                         }
                     }
@@ -368,6 +382,12 @@ module.exports = function(RED) {
     // We use this node if no replacement is defined.
     // This gives us access to the basic functionality of a node, like emitting warnings & errors.
     function mcu_void(config) {
+
+        // This affects the runtime representation of the node!
+        if (!this._mcu) {
+            this._mcu = {};
+        }
+        this._mcu.reset_status_on_abort = true;
 
         // Let's give back this voided node it's original type!
         if ("void" in config) {
