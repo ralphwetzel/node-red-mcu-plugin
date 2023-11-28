@@ -20,8 +20,22 @@ class mcuSerialPort extends Node {
         let self = this;
 
         self.listeners = [];
-        self.on_status = [];
         self.read_buffer = undefined;
+
+        self.state = {
+            connected: {
+                fill: "green",
+                shape: "dot",
+                text: "connected"
+            },
+            error: {
+                fill: "red",
+                shape: "dot",
+                text: "Failed to connect"
+            },
+            status: "",
+            targets: []
+        }
 
         self.newline = config.newline; /* overloaded: split character, timeout, or character count */
         self.addchar = config.addchar || "";
@@ -220,32 +234,33 @@ class mcuSerialPort extends Node {
             process_on_read = processor["pass"];            
         }
 
-        self.serial = new Serial({
-            baud: parseInt(config.serialbaud) || 115200,
-            port: res.P,
-            receive: res.R,
-            transmit: res.T,
-            format: "buffer",
-            onReadable: function (count) {
-                let buf = new Uint8Array(this.read());
-                if (self.waitfor) {
-                    let start = buf.indexOf(self.waitfor);
-                    if (start > -1) {
-                        self.waitfor = undefined;
-                        if (buf.length > start + 1) {
-                            process_on_read(buf.slice(start + 1));
+        try {
+            self.serial = new Serial({
+                baud: parseInt(config.serialbaud) || 115200,
+                port: res.P,
+                receive: res.R,
+                transmit: res.T,
+                format: "buffer",
+                onReadable: function (count) {
+                    let buf = new Uint8Array(this.read());
+                    if (self.waitfor) {
+                        let start = buf.indexOf(self.waitfor);
+                        if (start > -1) {
+                            self.waitfor = undefined;
+                            if (buf.length > start + 1) {
+                                process_on_read(buf.slice(start + 1));
+                            }
                         }
+                        return;
                     }
-                    return;
+                    process_on_read(buf);
                 }
-                process_on_read(buf);
-            },
-            onWritable: function() {
-                self.on_status.forEach( (n) => {
-                    n.status({fill:"green",shape:"dot",text:"connected"})
-                })
-            }
-        });
+            });
+            self.state.status = "connected";
+        } catch (err) {
+            self.error(err.toString());
+            self.state.status = "error";
+        }
 
         self.register_listener = function(id) {
             let n = RED.nodes.getNode(id);
@@ -257,7 +272,7 @@ class mcuSerialPort extends Node {
         self.register_status = function(id) {
             let n = RED.nodes.getNode(id);
             if (n) {
-                self.on_status.push(n);
+                self.state.targets.push(n);
             }
         }
 
@@ -266,6 +281,20 @@ class mcuSerialPort extends Node {
                 self.serial.write(buf);
             } catch {}
         }
+
+        self.ping = function() {
+            let s = self.state[self.state.status];
+            if (s) {
+                self.state.targets.forEach( (n) => {
+                    n.status(s);
+                })
+            }
+        }
+
+        self.ping();
+        setInterval(function() {
+            self.ping();
+        }, 2500);
     }
 
     static {
