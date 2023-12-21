@@ -1896,6 +1896,10 @@ module.exports = function(RED) {
                             `${process.env["USERPROFILE"]}\\.espressif`,
                             `C:\\Espressif`
                         ]);
+                        env.LOCALAPPDATA =  ensure_env_path("LOCALAPPDATA", [
+                            `${process.env["LOCALAPPDATA"]};`,
+                            `${process.env["USERPROFILE"]}\\AppData\\Local`
+                        ]);
                     } else {
                         try {
                             // This one is a bit different: Take it if defined, yet don't care if not!
