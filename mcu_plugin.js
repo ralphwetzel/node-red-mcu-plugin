@@ -1897,7 +1897,6 @@ module.exports = function(RED) {
                             `C:\\Espressif`
                         ]);
                         env.LOCALAPPDATA =  ensure_env_path("LOCALAPPDATA", [
-                            `${process.env["LOCALAPPDATA"]};`,
                             `${process.env["USERPROFILE"]}\\AppData\\Local`
                         ]);
                     } else {
