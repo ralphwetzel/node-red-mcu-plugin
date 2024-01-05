@@ -748,7 +748,8 @@ module.exports = function(RED) {
             'sim/moddable_four': "Moddable Four",
             'sim/nodemcu': "Node MCU",
             'sim/pico_display': "Pico Display",
-            'sim/pico_display_2': "Pico Display2"
+            'sim/pico_display_2': "Pico Display2",
+            'sim/pico_ws_round': "Pico Round Display / WaveShare"
         };
 
         let platforms = mcu_plugin_config.platforms;
