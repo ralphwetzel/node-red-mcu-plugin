@@ -741,6 +741,7 @@ module.exports = function(RED) {
         // Those are the available sims we are aware of:
         let simulator_identifiers = {
             'sim/m5paper': "M5Paper",
+            'sim/m5stack' : "M5Stack",
             'sim/m5stickc': "M5Stick",
             'sim/moddable_one': "Moddable One",
             'sim/moddable_two': "Moddable Two",
