@@ -662,6 +662,7 @@ module.exports = function(RED) {
             'nrf52/dk',
             'nrf52/itsybitsy',
             'nrf52/makerdiary_nrf52',
+            'nrf52/moddable_display_4',
             'nrf52/moddable_four',
             'nrf52/moddable_four_io',
             'nrf52/sparkfun',
