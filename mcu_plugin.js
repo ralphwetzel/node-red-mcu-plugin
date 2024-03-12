@@ -662,6 +662,7 @@ module.exports = function(RED) {
             'nrf52/dk',
             'nrf52/itsybitsy',
             'nrf52/makerdiary_nrf52',
+            'nrf52/moddable_display_4',
             'nrf52/moddable_four',
             'nrf52/moddable_four_io',
             'nrf52/sparkfun',
@@ -741,6 +742,7 @@ module.exports = function(RED) {
         // Those are the available sims we are aware of:
         let simulator_identifiers = {
             'sim/m5paper': "M5Paper",
+            'sim/m5stack' : "M5Stack",
             'sim/m5stickc': "M5Stick",
             'sim/moddable_one': "Moddable One",
             'sim/moddable_two': "Moddable Two",
