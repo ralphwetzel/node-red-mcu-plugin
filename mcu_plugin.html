@@ -533,6 +533,14 @@
         RED.events.on("flows:change", onFlowChange)
         RED.events.on("flows:reorder", onFlowsReorder)
 
+        RED.events.on("workspace:clear", () => {
+            objects = {};
+            flowData = [];
+            if (flowSelector) {
+                flowSelector.treeList('data', flowData);
+            }
+        })
+
         progress_bar = new ProgressBar(".mcu-build-progress-bar");
 
         const progress_re = /^(?:Writing at 0x)(?:[0123456789abcdef]+\.{3} \()(\d{1,3})(?: %\))/;
