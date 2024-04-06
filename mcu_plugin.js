@@ -1863,6 +1863,7 @@ module.exports = function(RED) {
             "SHELL": process.env.SHELL,
             "PATH": process.env.PATH,
             "MODDABLE": MODDABLE,
+            "FONTBM": process.env.FONTBM,
             "BUILD": path.resolve(MODDABLE, "build")
         }
 
