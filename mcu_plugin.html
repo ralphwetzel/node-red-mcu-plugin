@@ -537,7 +537,8 @@
             objects = {};
             flowData = [];
             if (flowSelector) {
-                flowSelector.treeList('data', flowData);
+                flowSelector.treeList('clearSelection');
+                flowSelector.treeList('empty');
             }
         })
 
