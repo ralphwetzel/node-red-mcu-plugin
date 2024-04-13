@@ -854,6 +854,32 @@ module.exports = function(RED) {
     // The AbortController for runner_promise
     let runner_abort;
 
+    RED.events.on("flows:stopping", (...args) => {
+
+        let flows = args[0]?.config?.flows;
+
+        if (flows && Array.isArray(flows)) {
+            for (let i=0; i<flows.length; i++) {
+                let f = flows[i];
+                if (f?._mcu?.mcu) {
+                    // abort the currently running runner
+                    if (runner_promise && runner_abort) {
+                        runner_abort.abort();
+                        delete runner_promise;
+                        delete runner_abort;
+                        if (proxy) {
+                            proxy.disconnect();
+                            delete proxy;
+                        }
+                        RED.log.info("MCU: Aborting active server side debugging session.");
+                    }
+                    break;
+                }
+            }
+        }
+
+    })
+
     function consolidate_mcu_nodes(with_ui_support) {
 
         // Select the nodes to build flows.json
