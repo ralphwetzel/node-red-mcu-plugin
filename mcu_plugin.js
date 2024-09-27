@@ -671,6 +671,7 @@ module.exports = function(RED) {
             'nrf52/moddable_display_4',
             'nrf52/moddable_four',
             'nrf52/moddable_four_io',
+            'nrf52/moddable_four_uart',
             'nrf52/sparkfun',
             'nrf52/xiao',
             'nrf52/xiao_ili9341',
@@ -754,6 +755,7 @@ module.exports = function(RED) {
             'sim/moddable_two': "Moddable Two",
             'sim/moddable_three': "Moddable Three",     // this order looks better
             'sim/moddable_four': "Moddable Four",
+            'sim/moddable_six': "Moddable Six",
             'sim/nodemcu': "Node MCU",
             'sim/pico_display': "Pico Display",
             'sim/pico_display_2': "Pico Display2",
