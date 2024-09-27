@@ -2169,6 +2169,7 @@ module.exports = function(RED) {
                 env["PROCESSOR_ARCHITECTURE"] = process.env["PROCESSOR_ARCHITECTURE"];
 
                 runner_options["windowsHide"] = true;
+                runner_options["shell"] = true;
 
                 // https://stackoverflow.com/questions/46072248/node-js-how-to-detect-user-language
                 let locale = Intl.DateTimeFormat().resolvedOptions().locale;
