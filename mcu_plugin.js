@@ -96,17 +96,26 @@ function get_require_path(req_path) {
 
     let rmsl = rms.length;
 
+    /* This are some known patterns:
+        require.main.path:
+            dev:        [...]/node-red/packages/node_modules/node-red
+            install:    [...]/lib/node_modules/node-red
+            pi:         /lib/node_modules/node-red/
+            docker:     /usr/src/node-red/node_modules/node-red
+
+        target:
+            dev:        [...]/node-red/packages/node_modules/@node-red
+            install:    [...]/lib/node_modules/node-red/node_modules/@node-red
+            pi:         /lib/node_modules/node-red/node_modules/@node-red
+            docker:     /usr/src/node-red/node_modules/@node-red
+    */
+
     if (rms.includes("packages"))  {
         if (rms[rmsl-3]=="packages" && rms[rmsl-2]=="node_modules" && rms[rmsl-1]=="node-red") {
-            // dev:     [...]/node-red/packages/node_modules/node-red
-            // install: [...]/lib/node_modules/node-red
-            // pi:      /lib/node_modules/node-red/
-
-            // dev:     [...]/node-red/packages/node_modules/@node-red
-            // install: [...]/lib/node_modules/node-red/node_modules/@node-red
-            // pi:      /lib/node_modules/node-red/node_modules/@node-red
             rms.splice(-2);
         }
+    } else if (rms[0]=="usr" && rms[1]=="src" && rms[2]=="node-red" && rmsl==5) {
+        rms.splice(-2);
     }
 
     // compose things again...
