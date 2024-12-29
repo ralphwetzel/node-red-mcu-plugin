@@ -1,6 +1,6 @@
 {
   "name": "@ralphwetzel/node-red-mcu-plugin",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Plugin to integrate Node-RED MCU Edition into the Node-RED Editor",
   "node-red": {
     "version": ">=2.0.0 <4.1.0",
