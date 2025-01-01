@@ -293,6 +293,7 @@ module.exports = function(RED) {
     }
 
     // Try to get the version number of the MODDABLE SDK
+    // This check is used to verify that the SDK is truly present in $MODDABLE!
     try {
 
         let git_describe = "git describe --abbrev=7 --always  --long";
@@ -306,7 +307,13 @@ module.exports = function(RED) {
                 RED.log.info(`Moddable SDK Version: v${__VERSIONS__.moddable}`);
             }
         }
-    } catch {}
+    } catch (err) {
+        RED.log.error("*** node-red-mcu-plugin -> Error!");
+        RED.log.error(`* Failed to query for Moddable SDK Version: "${err.stderr.trim()}"`);
+        RED.log.error("* There seems to be an issue with this installation, that we cannot mitigate!");
+        RED.log.error("*** node-red-mcu-plugin -> Runtime setup canceled.");
+        return;
+    }
 
     // get the commit hash of the main.js
     try {
