@@ -297,7 +297,7 @@ module.exports = function(RED) {
     try {
 
         let git_describe = "git describe --abbrev=7 --always  --long";
-        let moddable_version = execSync(git_describe, {"cwd": MODDABLE, input: "describe --abbrev=7 --always  --long", encoding: "utf-8"});
+        let moddable_version = execSync(git_describe, {"cwd": MODDABLE, input: "describe --abbrev=7 --always  --long", encoding: "utf-8", stdio: ['pipe', 'pipe', 'pipe']});
         if (typeof moddable_version == "string" && moddable_version.length > 0) {
             __VERSIONS__['moddable'] = moddable_version.trim();
             
