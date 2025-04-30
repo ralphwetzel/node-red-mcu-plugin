@@ -96,17 +96,26 @@ function get_require_path(req_path) {
 
     let rmsl = rms.length;
 
+    /* This are some known patterns:
+        require.main.path:
+            dev:        [...]/node-red/packages/node_modules/node-red
+            install:    [...]/lib/node_modules/node-red
+            pi:         /lib/node_modules/node-red/
+            docker:     /usr/src/node-red/node_modules/node-red
+
+        target:
+            dev:        [...]/node-red/packages/node_modules/@node-red
+            install:    [...]/lib/node_modules/node-red/node_modules/@node-red
+            pi:         /lib/node_modules/node-red/node_modules/@node-red
+            docker:     /usr/src/node-red/node_modules/@node-red
+    */
+
     if (rms.includes("packages"))  {
         if (rms[rmsl-3]=="packages" && rms[rmsl-2]=="node_modules" && rms[rmsl-1]=="node-red") {
-            // dev:     [...]/node-red/packages/node_modules/node-red
-            // install: [...]/lib/node_modules/node-red
-            // pi:      /lib/node_modules/node-red/
-
-            // dev:     [...]/node-red/packages/node_modules/@node-red
-            // install: [...]/lib/node_modules/node-red/node_modules/@node-red
-            // pi:      /lib/node_modules/node-red/node_modules/@node-red
             rms.splice(-2);
         }
+    } else if (rms[0]=="usr" && rms[1]=="src" && rms[2]=="node-red" && rmsl==5) {
+        rms.splice(-2);
     }
 
     // compose things again...
@@ -284,10 +293,11 @@ module.exports = function(RED) {
     }
 
     // Try to get the version number of the MODDABLE SDK
+    // This check is used to verify that the SDK is truly present in $MODDABLE!
     try {
 
         let git_describe = "git describe --abbrev=7 --always  --long";
-        let moddable_version = execSync(git_describe, {"cwd": MODDABLE, input: "describe --abbrev=7 --always  --long", encoding: "utf-8"});
+        let moddable_version = execSync(git_describe, {"cwd": MODDABLE, input: "describe --abbrev=7 --always  --long", encoding: "utf-8", stdio: ['pipe', 'pipe', 'pipe']});
         if (typeof moddable_version == "string" && moddable_version.length > 0) {
             __VERSIONS__['moddable'] = moddable_version.trim();
             
@@ -297,7 +307,13 @@ module.exports = function(RED) {
                 RED.log.info(`Moddable SDK Version: v${__VERSIONS__.moddable}`);
             }
         }
-    } catch {}
+    } catch (err) {
+        RED.log.error("*** node-red-mcu-plugin -> Error!");
+        RED.log.error(`* Failed to query for Moddable SDK Version: "${err.stderr.trim()}"`);
+        RED.log.error("* There seems to be an issue with this installation, that we cannot mitigate!");
+        RED.log.error("*** node-red-mcu-plugin -> Runtime setup canceled.");
+        return;
+    }
 
     // get the commit hash of the main.js
     try {
