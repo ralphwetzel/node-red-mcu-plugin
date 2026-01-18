@@ -2123,14 +2123,14 @@ module.exports = function(RED) {
                         `@echo ${cmd}`,
                         `${cmd}`,
                        ]
-                    }else{
+                    } else {
                         bcmds = [
                         `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars${x_win}.bat"`,
                         `@echo ${cmd}`,
                         `${cmd}`,
                        ]
                     }
-                }else{
+                } else {
                     bcmds.push(`runthis ${cmd}`);
                 }
                 break;
