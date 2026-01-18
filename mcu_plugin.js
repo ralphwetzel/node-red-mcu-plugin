@@ -279,19 +279,18 @@ module.exports = function(RED) {
     // Check version of MODDABLE tools on Windows
 
     if (os.platform() === "win32") {
-        if (fs.existsSync(`${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\18`)) {
-            let testcmd = [
-                `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" > nul`,
-                `cd /D ${MODDABLE}\\build\\bin\\win\\debug`,
-                'dumpbin /headers xsbug.exe | findstr "machine"'
-            ].join(" && ");
+        const programFiles = process.env["ProgramFiles"];
+        let vsVarsPath;
+        if (fs.existsSync(`${programFiles}\\Microsoft Visual Studio\\18`)) {
+            vsVarsPath = `${programFiles}\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat`;
         } else {
-            let testcmd = [
-                `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" > nul`,
-                `cd /D ${MODDABLE}\\build\\bin\\win\\debug`,
-                'dumpbin /headers xsbug.exe | findstr "machine"'
-            ].join(" && ");
+            vsVarsPath = `${programFiles}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat`;
         }
+        const testcmd = [
+            `CALL "${vsVarsPath}" > nul`,
+            `cd /D ${MODDABLE}\\build\\bin\\win\\debug`,
+            'dumpbin /headers xsbug.exe | findstr "machine"'
+        ].join(" && ");
         try {
             // This doesn't test for i64 (!!)
             let test = execSync(testcmd, {"encoding": "utf-8"});
