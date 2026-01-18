@@ -2115,14 +2115,21 @@ module.exports = function(RED) {
                 bcmds.push(`runthis ${cmd}`);
                 break;
             
-            case "nrf52":
-            
+            case "nrf52":            
                 if (os.platform() === "win32") {
-                    bcmds = [
+                    if (fs.existsSync(`${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\18`)) {
+                        bcmds = [
+                        `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat"`,
+                        `@echo ${cmd}`,
+                        `${cmd}`,
+                       ]
+                    }else{
+                        bcmds = [
                         `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars${x_win}.bat"`,
                         `@echo ${cmd}`,
                         `${cmd}`,
-                    ]
+                       ]
+                    }
                 }else{
                     bcmds.push(`runthis ${cmd}`);
                 }
