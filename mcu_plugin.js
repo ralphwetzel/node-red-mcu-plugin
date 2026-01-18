@@ -2154,25 +2154,20 @@ module.exports = function(RED) {
 
                 if (os.platform() === "win32") {
                     // execFile doesn't expand the env variables... ??
+                    let vsBatPath;
                     if (fs.existsSync(`${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\18`)) {
-                        bcmds = [
-                            `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat"`,
-                            'pushd %IDF_PATH%',
-                            `CALL "${process.env["IDF_TOOLS_PATH"]}\\idf_cmd_init.bat"`,
-                            'popd',
-                            `@echo ${cmd}`,
-                            `${cmd}`,
-                        ]
+                        vsBatPath = `${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat`;
                     } else {
-                        bcmds = [
-                            `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars${x_win}.bat"`,
-                            'pushd %IDF_PATH%',
-                            `CALL "${process.env["IDF_TOOLS_PATH"]}\\idf_cmd_init.bat"`,
-                            'popd',
-                            `@echo ${cmd}`,
-                            `${cmd}`,
-                        ]
+                        vsBatPath = `${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars${x_win}.bat`;
                     }
+                    bcmds = [
+                        `CALL "${vsBatPath}"`,
+                        'pushd %IDF_PATH%',
+                        `CALL "${process.env["IDF_TOOLS_PATH"]}\\idf_cmd_init.bat"`,
+                        'popd',
+                        `@echo ${cmd}`,
+                        `${cmd}`,
+                    ]
                 } else {
 
                     // See remark above cencerning UPLOAD_PORT!
