@@ -642,6 +642,7 @@ module.exports = function(RED) {
             'esp32/m5atom_s3',
             'esp32/m5atom_s3_lite',
             'esp32/m5atom_s3r',
+            'esp32/m5atom_s3r_cam',
             'esp32/m5atom_s3_org',
             'esp32/m5atom_u',
             'esp32/m5core_ink',
