@@ -622,6 +622,7 @@ module.exports = function(RED) {
             'esp32/esp32s3',
             'esp32/esp32s3_cdc',
             'esp32/esp32s3_usb',
+            'esp32/ethernet_kit',
             'esp32/feather_s3_tft',
             'esp32/heltec_lora_32',
             'esp32/heltec_wifi_kit_32',
