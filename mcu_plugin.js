@@ -637,6 +637,7 @@ module.exports = function(RED) {
             'esp32/lolin_s2mini',
             'esp32/m5atom_echo',
             'esp32/m5atom_lite',
+            'esp32/m5atom_lite_echo_base',
             'esp32/m5atom_matrix',
             'esp32/m5atom_s3',
             'esp32/m5atom_s3_lite',
