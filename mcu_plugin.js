@@ -279,12 +279,18 @@ module.exports = function(RED) {
     // Check version of MODDABLE tools on Windows
 
     if (os.platform() === "win32") {
-        let testcmd = [
-            `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat" > nul`,
+        const programFiles = process.env["ProgramFiles"];
+        let vsVarsPath;
+        if (fs.existsSync(`${programFiles}\\Microsoft Visual Studio\\18`)) {
+            vsVarsPath = `${programFiles}\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat`;
+        } else {
+            vsVarsPath = `${programFiles}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat`;
+        }
+        const testcmd = [
+            `CALL "${vsVarsPath}" > nul`,
             `cd /D ${MODDABLE}\\build\\bin\\win\\debug`,
             'dumpbin /headers xsbug.exe | findstr "machine"'
         ].join(" && ");
-
         try {
             // This doesn't test for i64 (!!)
             let test = execSync(testcmd, {"encoding": "utf-8"});
@@ -2155,8 +2161,14 @@ module.exports = function(RED) {
 
                 if (os.platform() === "win32") {
                     // execFile doesn't expand the env variables... ??
+                    let vsBatPath;
+                    if (fs.existsSync(`${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\18`)) {
+                        vsBatPath = `${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\18\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat`;
+                    } else {
+                        vsBatPath = `${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars${x_win}.bat`;
+                    }
                     bcmds = [
-                        `CALL "${process.env["ProgramFiles"]}\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvars${x_win}.bat"`,
+                        `CALL "${vsBatPath}"`,
                         'pushd %IDF_PATH%',
                         `CALL "${process.env["IDF_TOOLS_PATH"]}\\idf_cmd_init.bat"`,
                         'popd',
