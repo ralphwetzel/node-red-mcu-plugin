@@ -544,25 +544,62 @@ module.exports = function(RED) {
             cache_data = (cache_data.length > 0) ? cache_data : "[]"
         }
 
+        mcu_plugin_config.cache_file = cache_file;
+
         try {
             cache_data = JSON.parse(cache_data) || {};
         } catch (err) {
             RED.log.warn(`${app_name}: Cache file corrupted @ ${cache_file}.`);
         }
 
-        mcu_plugin_config.cache_file = cache_file;
-        mcu_plugin_config.cache_data = cache_data;
+        let cd = cache_data;
+
+        if (Array.isArray(cd)) {
+
+            // v1: Array of build configs
+            mcu_plugin_config.cache_data = cd;
+            mcu_plugin_config.setup = {}
+
+        } else if (cd.config && cd.setup) {
+            
+            // v2: Object w/ setup & config
+            mcu_plugin_config.cache_data = cd.config;
+            mcu_plugin_config.setup = cd.setup
+
+        } else {
+
+            // error
+            RED.log.warn(`${app_name}: Cache file corrupted @ ${cache_file}.`);
+            mcu_plugin_config.cache_data = [];
+            mcu_plugin_config.setup = {}
+
+        }        
+
     }
 
     function persist_cache(data) {
-        if (!data) {
-            data = mcu_plugin_config.cache_data;
-        } else {
-            mcu_plugin_config.cache_data = data;
+
+        const d = {
+            "config": structuredClone(mcu_plugin_config.cache_data),
+            "setup": structuredClone(mcu_plugin_config.setup ?? {})
         }
 
-        let cache_data = JSON.stringify(data);
-        fs.writeFile(mcu_plugin_config.cache_file, cache_data, err => {
+        if (data) {
+            if (Array.isArray(data)) {
+                d.config = data;
+            } else {
+                if (data.config) {
+                    d.config = data.config;
+                }
+                if (data.setup) {
+                    d.setup = data.setup;
+                }
+            }
+        }
+        mcu_plugin_config.cache_data = d.config;
+        mcu_plugin_config.setup = d.setup;
+
+        fs.writeFile(mcu_plugin_config.cache_file, JSON.stringify(d), err => {
             if (err) {
                 RED.log.warn(`${app_name}: Failed to persist config to cache @ ${mcu_plugin_config.cache_file}.`);
             }
